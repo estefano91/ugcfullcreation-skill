@@ -62,23 +62,25 @@ Multi-actor campaigns are supported — list all actors involved and merge refer
 
 Each format has a fixed wizard step sequence. Follow it exactly.
 
-### Image formats (no video assembly)
+### Image formats
 ```
-STATIC_POST  (4:5,  1 shot)  : FORMAT → ACTOR → CONCEPT → ART → SHOTS → GENERATE.PY → CAPTION → PUBLISH
-STORY        (9:16, 1 shot)  : FORMAT → ACTOR → CONCEPT → ART → SHOTS → GENERATE.PY → CAPTION → PUBLISH
-COLLAB_POST  (4:5,  1 shot)  : FORMAT → ACTOR → CONCEPT → ART → SHOTS → GENERATE.PY → CAPTION → COLLAB_TAG → PUBLISH
-```
-
-### Video formats (require Remotion assembly)
-```
-REEL         (9:16, 5-10 shots) : FORMAT → ACTOR → CONCEPT → SCRIPT → ART → SHOTS → GENERATE.PY → REMOTION → CAPTION → PUBLISH
-STORY_VIDEO  (9:16, 2-8 shots)  : FORMAT → ACTOR → CONCEPT → SCRIPT → ART → SHOTS → GENERATE.PY → REMOTION → CAPTION → PUBLISH
+STATIC_POST  (4:5,  1 shot)     : FORMAT → ACTOR → CONCEPT → ART → SHOT → GENERATE.PY → CAPTION → PUBLISH
+STORY        (9:16, 1 shot)     : FORMAT → ACTOR → CONCEPT → ART → SHOT → GENERATE.PY → CAPTION → PUBLISH
+COLLAB_POST  (4:5,  1 shot)     : FORMAT → ACTOR → CONCEPT → ART → SHOT → GENERATE.PY → CAPTION → COLLAB_TAG → PUBLISH
+CAROUSEL     (4:5,  2-10 slides): FORMAT → ACTOR → CONCEPT → ART → SLIDES → GENERATE.PY → CAPTION → PUBLISH
 ```
 
-### Multi-image format
+### Video formats — single animated frame (GPT Image 2 → Kling / Seedance)
 ```
-CAROUSEL     (4:5,  2-10 slides): FORMAT → ACTOR → CONCEPT → THEME → SLIDES → GENERATE.PY → CAPTION → PUBLISH
+REEL (9:16, 3-8s)
+  AMBIENT     : FORMAT → REEL_TYPE → ACTOR → CONCEPT → ART → SHOT → GENERATE.PY → CAPTION → PUBLISH
+  PORTRAIT    : FORMAT → REEL_TYPE → ACTOR → CONCEPT → ART → SHOT → GENERATE.PY → CAPTION → PUBLISH
+  TEXT_REEL   : FORMAT → REEL_TYPE → ACTOR → CONCEPT → ART → SHOT → TEXT_OVERLAY → GENERATE.PY → CAPTION → PUBLISH
+  POV         : FORMAT → REEL_TYPE → ACTOR → CONCEPT → ART → SHOT → GENERATE.PY → CAPTION → PUBLISH
+  PRODUCT     : FORMAT → REEL_TYPE → ACTOR → CONCEPT → ART → SHOT → GENERATE.PY → CAPTION → PUBLISH
 ```
+
+All REEL sub-types use the **2-step pipeline**: GPT Image 2 edit (face-locked frame, ~$0.07) → Kling O3 or Seedance (animation, ~$0.84). Never use multi-shot slides for REEL.
 
 ---
 
@@ -95,15 +97,38 @@ Present the format menu:
 ```
 Which format are you creating?
 
-  1  STATIC_POST    — single image, 4:5, feed post
-  2  STORY          — single image, 9:16, story frame
-  3  COLLAB_POST    — single image, 4:5, collab/partnership post
-  4  REEL           — multi-shot video, 9:16, 5-10 images → assembled reel
-  5  STORY_VIDEO    — multi-shot video, 9:16, 2-8 images → story video
-  6  CAROUSEL       — multi-slide, 4:5, 2-10 slides
+  Images:
+    1  STATIC_POST    — single image, 4:5, feed post
+    2  STORY          — single image, 9:16, story frame
+    3  COLLAB_POST    — single image, 4:5, collab/partnership post
+    4  CAROUSEL       — multi-slide, 4:5, 2-10 slides
+
+  Video (single animated frame — GPT Image 2 → Kling / Seedance):
+    5  REEL           — 9:16, 3-8s, one shot animated
 ```
 
-Lock the format. Show the flow for that format so the user knows what's coming.
+If the user picks REEL, immediately ask the reel type before anything else:
+
+```
+REEL TYPE — which style?
+
+  1  AMBIENT      — 3-5s atmospheric loop. Hair, light, fabric, water move.
+                    No text. Pure vibe. Best: outdoor, golden hour, pool, café.
+
+  2  PORTRAIT     — 3-5s face/upper-body close-up loop. Slow smile, gaze shift,
+                    hair catch. Hypnotic, high save rate. Best: beauty, lifestyle.
+
+  3  TEXT REEL    — 5-8s animated frame + bold text overlay. Quote, "POV:",
+                    product hook, or statement. Most viral format in 2026.
+
+  4  POV          — 5-8s direct-to-camera. Actor reacts to an implied viewer.
+                    "you just arrived," "she looks up." Very UGC-native.
+
+  5  PRODUCT      — 5-8s product reveal or interaction. Actor holds, applies,
+                    tastes, or notices the product. Classic UGC collab format.
+```
+
+Lock the format + reel type. Show the flow so the user knows what's coming.
 
 ---
 
@@ -264,21 +289,32 @@ This applies in: ART DIRECTION (Step 5), SHOTS (Step 6), and CAPTION (Step 10). 
 
 ---
 
-### STEP 4 — SCRIPT (REEL / STORY_VIDEO only)
+### STEP 4 — MOTION CONCEPT (REEL only)
 
-Write a short-form script:
+For REEL formats, define the movement before designing the shot. A clear motion concept drives both the image prompt (what pose/moment to freeze) and the motion prompt (what Kling/Seedance should animate).
+
+Output a motion concept block:
 
 ```
-HOOK:    [First 1-3 seconds — scroll-stopper, question, visual surprise, or statement]
-BODY:    [Main content beats — 3-5 lines, each a distinct visual moment]
-CTA:     [Last moment — optional for pure lifestyle content]
+MOTION CONCEPT
+─────────────────────────────────────────────────────
+  Reel type:     {AMBIENT / PORTRAIT / TEXT_REEL / POV / PRODUCT}
+  Duration:      {3s / 5s / 8s} — recommended for this type
+  Frozen moment: [What the GPT Image 2 frame captures — the "before" pose]
+  Movement:      [What Kling/Seedance animates — specific, physical, real]
+  Energy:        [Pace and mood — slow drift / casual shift / subtle reaction]
+─────────────────────────────────────────────────────
 ```
 
-Rules:
-- Write for the format duration (REEL: 15-30s, STORY_VIDEO: 8-15s)
-- Each body line = one visual shot
-- If no product: hook is vibe/energy, body is lifestyle beats, CTA is optional
-- Show the script and ask: approve / adjust before continuing
+**Per reel-type motion guidelines:**
+
+- **AMBIENT**: Environment moves, actor barely does. Wind lifts fabric, water shimmers, light shifts. Actor: micro weight shift, slow exhale. Seamless loop feel.
+- **PORTRAIT**: Face focus. Slow smile forms, gaze drops then returns to camera, single hair strand falls, eyes close briefly. One gesture max.
+- **TEXT_REEL**: Actor is mostly still — text is the main event. Simple head turn or look up into camera. Duration long enough to read the text (5-8s).
+- **POV**: Actor reacts to an implied presence. Looks up from something, slows to a stop, makes eye contact with camera, a small smile forms. Intentional but real.
+- **PRODUCT**: Product is introduced. Actor picks it up, holds it toward camera, opens it, or looks at it then up at viewer. Product in motion adds energy.
+
+Show the motion concept and ask: approve / adjust before continuing.
 
 ---
 
@@ -342,23 +378,26 @@ Ask the user to confirm or adjust before writing prompts.
 
 ---
 
-### STEP 6 — SHOTS / SLIDES
+### STEP 6 — SHOT / SLIDES
 
-For image formats: design the shot list (usually 3-6 shots for selection, 1 final needed).
-For REEL/STORY_VIDEO: one shot per script line.
-For CAROUSEL: one slide per theme beat.
+**For REEL**: one shot only — the frozen moment that Kling/Seedance will animate. Design it specifically for motion: choose a pose that implies movement about to happen (hair mid-fall, weight shifting, eyes half-lifted).
 
-For each shot, output a **Shot Card**:
+**For image formats** (STATIC_POST, STORY, COLLAB_POST): usually propose 2-3 options, user picks one.
+
+**For CAROUSEL**: one slide per theme beat.
+
+Output a **Shot Card** for each:
 
 ```
-SHOT N — [name]
-Action:    [what the actor is doing]
-Framing:   [close-up / medium / full body / POV / over-shoulder]
-Camera:    [which profile]
-Key moment: [the one thing that makes this shot work]
+SHOT — [name]
+Action:      [what the actor is doing at the frozen moment]
+Framing:     [close-up / medium / full body / POV / over-shoulder]
+Camera:      [which profile from SYSTEM 9]
+Key moment:  [the one thing that makes this shot work]
+Motion note: [REEL only — what specifically moves when animated]
 ```
 
-Get user approval on the shot list before writing full prompts.
+Get user approval before writing full prompts.
 
 ---
 
@@ -484,7 +523,7 @@ print(f"  {len(SHOTS)} shots complete — {campaign_slug}_{date}")
 print(f"{'─'*55}\n")
 ```
 
-**Rules for generate.py:**
+**Rules for generate.py (image formats):**
 - **REFS strategy (critical for face consistency):**
   - Check if `hero_shots/` folder exists for the actor — if yes, use it. Otherwise use `references/`.
   - **Single actor: use exactly 2 refs** — `reference-01.jpg` + the clearest portrait/selfie ref. Never more.
@@ -494,10 +533,110 @@ print(f"{'─'*55}\n")
 - Seeds: use `actor.prompt_seed` as base, add offset per shot (e.g. +0, +7, +14, +21…) — never use random
 - OUT_DIR follows naming: `{actor_short}-{concept_slug}_{YYYY-MM-DD}` e.g. `glacia-pool_2026-04-04`
 - For multi-actor: `{actor1}-{actor2}-{concept}_{date}` e.g. `luna-mia-gym_2026-04-04`
-- aspect_ratio from format: STATIC_POST/COLLAB_POST/CAROUSEL → "4:5", STORY/REEL/STORY_VIDEO → "9:16"
+- aspect_ratio from format: STATIC_POST/COLLAB_POST/CAROUSEL → "4:5", STORY → "9:16"
 - Always add `ensure_dir(OUT_DIR)` so the folder is created on first run
 - Name shots descriptively: `shot1-{location}-{action}` not just `shot1`
 - **Content policy (kie.ai / Google):** never use "bikini top" or "bikini" in prompts with reference images — flagged by Google Generative AI policy. Use "crop top", "tank top", "swimsuit", or "one-piece" instead.
+
+**REEL generate.py — 2-step pipeline template:**
+
+Always use this template for REEL format. Never use the kie.ai template for video.
+
+```python
+"""
+[Actor] — [concept] — [reel_type] REEL
+Step 1: GPT Image 2 edit (~$0.07) | Step 2: Kling O3 Pro image-to-video {duration}s (~$0.84)
+Actor: {actor_id}
+Date: {YYYY-MM-DD}
+"""
+import sys
+sys.path.insert(0, "/Users/asociaciondame/ugcpanorama")
+
+import os
+import requests
+import fal_client
+
+FAL_KEY = "930975a9-c25c-497d-b0a1-01f27317680a:21d6ce06c9e934ab27fc427d4e4748e1"
+os.environ["FAL_KEY"] = FAL_KEY
+
+REF_IMAGE = "/Users/asociaciondame/ugcpanorama/actors/{actor_id}/hero_shots/reference-01.jpg"
+OUT_DIR = "/Users/asociaciondame/ugcpanorama/campaigns/{campaign_slug}_{date}"
+
+SHARED_CONTEXT = (
+    "{full character anchor paragraph — same structure as previous campaigns}"
+)
+
+IMAGE_PROMPT = (
+    f"{SHARED_CONTEXT} "
+    "{scene, action, framing, camera profile, realism anchors, negatives — all 6 layers}"
+)
+
+MOTION_PROMPT = (
+    "{specific physical movement — from the motion concept. Short, concrete, real. "
+    "What moves, how fast, what the face does. No vague instructions.}"
+)
+
+NEGATIVE_VIDEO = (
+    "sudden jumps, unnatural movement, morphing face, identity change, extra limbs, "
+    "deformed hands, flickering, color shift, blurry face, teleportation"
+)
+
+
+def ensure_dir(path):
+    os.makedirs(path, exist_ok=True)
+
+
+ensure_dir(OUT_DIR)
+
+print(f"\n── STEP 1 — GPT Image 2 edit: base frame (~$0.07) ──\n")
+ref_url = fal_client.upload_file(REF_IMAGE)
+print(f"  ✓ {os.path.basename(REF_IMAGE)}")
+
+result_img = fal_client.subscribe("openai/gpt-image-2/edit", arguments={
+    "prompt": IMAGE_PROMPT,
+    "image_urls": [ref_url],
+    "quality": "medium",
+    "seed": {actor.prompt_seed}
+})
+
+frame_path = os.path.join(OUT_DIR, "{campaign_slug}-frame.png")
+with open(frame_path, "wb") as f:
+    f.write(requests.get(result_img["images"][0]["url"]).content)
+print(f"  ✓ Frame saved → {frame_path}")
+
+print(f"\n── STEP 2 — Kling O3 image-to-video ({duration}s ~$0.84) ──\n")
+frame_cdn_url = fal_client.upload_file(frame_path)
+print(f"  ✓ Frame uploaded. Submitting to Kling O3... (2-4 min)")
+
+result_vid = fal_client.subscribe("fal-ai/kling-video/o3/pro/image-to-video", arguments={
+    "prompt": MOTION_PROMPT,
+    "negative_prompt": NEGATIVE_VIDEO,
+    "image_url": frame_cdn_url,
+    "duration": "{duration}",
+    "aspect_ratio": "9:16"
+})
+
+out_path = os.path.join(OUT_DIR, "{campaign_slug}.mp4")
+with open(out_path, "wb") as f:
+    f.write(requests.get(result_vid["video"]["url"]).content)
+print(f"  ✓ Video saved → {out_path}")
+
+print(f"\n{'─'*55}")
+print(f"  Done — {campaign_slug}_{date}")
+print(f"{'─'*55}\n")
+```
+
+**Kling duration selection by reel type:**
+- AMBIENT: `"3"` or `"5"` — short loop, environment moves
+- PORTRAIT: `"3"` or `"5"` — short, hypnotic
+- TEXT_REEL: `"5"` — long enough to read the text
+- POV: `"5"` or `"8"` — needs time for reaction beat
+- PRODUCT: `"5"` or `"8"` — reveal takes time
+
+**Seedance as Kling alternative** — use `fal-ai/bytedance/seedance/v1/pro/image-to-video` when:
+- Better motion fluidity is needed (Seedance tends to be smoother on ambient/portrait)
+- Kling produces artifacts on a specific shot
+- Args: same `prompt`, `image_url`, `duration` (`"4"` or `"8"`), `resolution: "1080p"`, `aspect_ratio: "9:16"`
 
 #### 8c — EXPORT CAMPAIGN JSON
 
@@ -594,7 +733,7 @@ print(f"  ✓ campaign.json saved → {json_path}")
 }
 ```
 
-### Video campaign (REEL / STORY_VIDEO) — 2-step pipeline
+### Video campaign (REEL) — 2-step pipeline
 
 ```json
 {
@@ -603,6 +742,7 @@ print(f"  ✓ campaign.json saved → {json_path}")
   "created": "2026-04-23",
   "actor": "luna-21-caucasian-blonde",
   "format": "REEL",
+  "reel_type": "AMBIENT",
   "concept": "pool side satin pajama shorts",
   "provider": {
     "image": "gpt-image-2-edit",
@@ -635,42 +775,41 @@ print(f"  ✓ campaign.json saved → {json_path}")
 
 ---
 
-### STEP 9 — REMOTION (REEL / STORY_VIDEO only)
+### STEP 9 — TEXT OVERLAY (TEXT_REEL only)
 
-After the generate.py is confirmed, provide the Remotion assembly command.
+Only run this step if `reel_type = TEXT_REEL`. Skip entirely for AMBIENT, PORTRAIT, POV, PRODUCT.
 
-Platform context:
-- Remotion lives at `/Users/asociaciondame/ugcpanorama/platform`
-- Render API: `POST /api/render` at `http://localhost:3000/api/render`
-- REEL → composition `UGCReel` (9:16, 1080×1920, 450f @ 30fps = 15s)
-- STORY_VIDEO → composition `UGCStory` (9:16, 1080×1920, 300f @ 30fps = 10s)
+Collect text overlay specs and output a clear block for the user to apply in their editor (CapCut, Remotion, DaVinci, etc.):
 
-Output the render API payload:
-
-```json
-POST http://localhost:3000/api/render
-{
-  "compositionId": "UGCReel",
-  "props": {
-    "shots": [
-      "/Users/asociaciondame/ugcpanorama/campaigns/{campaign_slug}/shot1-{name}.png",
-      "/Users/asociaciondame/ugcpanorama/campaigns/{campaign_slug}/shot2-{name}.png"
-    ],
-    "caption": "{hook line from script}",
-    "audioUrl": null,
-    "actorName": "{actor display name}",
-    "transitionDuration": 12
-  },
-  "outputFilename": "reel-{campaign_slug}.mp4",
-  "campaignId": "{campaign_slug}"
-}
+```
+TEXT OVERLAY SPECS
+─────────────────────────────────────────────────────
+  Text:      "{the text that appears on screen}"
+  Position:  {top / center / lower-third / bottom}
+  Style:     {bold white / bold black / serif italic / caption-style / handwritten}
+  Size:      {large (fills ~70% width) / medium / small}
+  Timing:    {from start / fade in at 0.5s / appears at 1s}
+  Bg:        {none / soft shadow / semi-transparent black pill}
+─────────────────────────────────────────────────────
+Add in: CapCut → Text → add text layer
+        Remotion → pass as text_overlay prop
+        DaVinci → Fusion text node over video track
 ```
 
-Or via Remotion Studio for live preview:
-```bash
-cd /Users/asociaciondame/ugcpanorama/platform
-npx remotion studio src/remotion/index.ts
-# Opens at http://localhost:3003
+**Text overlay style by reel type context:**
+- Quote / lifestyle statement → large bold white, lower third, soft shadow, from start
+- "POV: ..." → large bold white, top third, no background, from start
+- Product hook → bold white centered, appears at 1s after actor settles
+- Hashtag or CTA → small caption-style, bottom, fade in at end
+
+Also add `text_overlay` to the `campaign.json` export:
+```json
+"text_overlay": {
+  "text": "POV: you finally booked that villa",
+  "position": "top",
+  "style": "bold white",
+  "timing": "from_start"
+}
 ```
 
 ---

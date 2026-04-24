@@ -26,14 +26,26 @@ Reads a `campaign.json`, shows cost estimate, confirms, then generates directly.
 
 ## Formats
 
-| Format | Aspect | Slides/Shots | Output |
+### Image formats
+
+| Format | Aspect | Shots | Output |
 |---|---|---|---|
 | `STATIC_POST` | 4:5 | 1 | Single image + caption |
 | `STORY` | 9:16 | 1 | Single image + caption |
 | `COLLAB_POST` | 4:5 | 1 | Single image + caption + collab tag |
-| `REEL` | 9:16 | 5–10 | Images → assembled video + caption |
-| `STORY_VIDEO` | 9:16 | 2–8 | Images → assembled video + caption |
 | `CAROUSEL` | 4:5 | 2–10 | Multi-slide images + caption |
+
+### Video format — single animated frame (GPT Image 2 → Kling / Seedance)
+
+| Format | Sub-type | Aspect | Duration | Description |
+|---|---|---|---|---|
+| `REEL` | `AMBIENT` | 9:16 | 3–5s | Atmospheric loop — hair, light, fabric move. No text. Pure vibe. |
+| `REEL` | `PORTRAIT` | 9:16 | 3–5s | Face/upper-body close-up. Slow smile, gaze shift, hair catch. |
+| `REEL` | `TEXT_REEL` | 9:16 | 5–8s | Animated frame + bold text overlay. "POV:", quote, product hook. |
+| `REEL` | `POV` | 9:16 | 5–8s | Direct-to-camera. Actor reacts to an implied viewer. |
+| `REEL` | `PRODUCT` | 9:16 | 5–8s | Product reveal or interaction. Actor holds, applies, reveals. |
+
+All REEL sub-types use the **2-step pipeline**: GPT Image 2 edit (face-locked frame) → Kling O3 or Seedance (animation). No multi-shot assembly needed.
 
 ---
 
@@ -42,15 +54,15 @@ Reads a `campaign.json`, shows cost estimate, confirms, then generates directly.
 The skill runs an interactive wizard. Each step must be completed before moving to the next.
 
 ```
-1.  FORMAT          → pick content type
+1.  FORMAT          → pick content type (+ REEL sub-type if REEL)
 2.  ACTOR           → select actor, loads identity + content profile
 3.  CONCEPT         → optional trend research, lock the idea
-4.  SCRIPT          → REEL/STORY_VIDEO only: hook + body beats + CTA
+4.  MOTION CONCEPT  → REEL only: frozen moment + animation beat + energy
 5.  ART DIRECTION   → location, time, outfit, mood, palette, camera style
-6.  SHOTS           → shot cards: action, framing, camera, key moment
-7.  PROMPTS         → full 6-layer prompts per shot
+6.  SHOT            → shot card: action, framing, camera, motion note
+7.  PROMPTS         → full 6-layer image prompt + motion prompt (REEL)
 8.  GENERATE.PY     → dry-run → cost estimate → write script → execute
-9.  REMOTION        → video formats only: render API payload
+9.  TEXT OVERLAY    → TEXT_REEL only: text, position, style, timing specs
 10. CAPTION         → hook + body + CTA + hashtag first comment
 11. PUBLISH         → schedule, platform, notes
 ```
