@@ -6,9 +6,21 @@ A complete UGC production skill for [Claude Code](https://claude.ai/code). Takes
 
 ## Activation
 
+### Mode A — Interactive Wizard (default)
 ```
 /ugcfullcreation
 ```
+Runs the full step-by-step wizard. Outputs `generate.py` + `campaign.json` + all images/videos.
+
+### Mode B — From JSON (skip wizard)
+```
+/ugcfullcreation from-json <path/to/campaign.json>
+```
+Or run directly:
+```bash
+python3 /Users/asociaciondame/ugcpanorama/run_from_json.py campaigns/my-campaign/campaign.json
+```
+Reads a `campaign.json`, shows cost estimate, confirms, then generates directly.
 
 ---
 
@@ -169,7 +181,8 @@ Do not mention `"swimsuit"`. Use `"cream linen pareo wrap tied at the hip over a
 
 ```
 /campaigns/{actor}-{concept}_{YYYY-MM-DD}/
-  generate.py       — generation script
+  generate.py       — generation script (wizard output)
+  campaign.json     — portable campaign data (re-runnable via Mode B)
   shot-deck.md      — all 6-layer prompts
   slide01-{name}.png
   slide02-{name}.png
@@ -177,6 +190,50 @@ Do not mention `"swimsuit"`. Use `"cream linen pareo wrap tied at the hip over a
   reel-{name}.mp4   — assembled video (if applicable)
   caption.txt
 ```
+
+## JSON Campaign Format
+
+After every wizard run, a `campaign.json` is exported. You can re-run any campaign or template it:
+
+```json
+{
+  "version": "1.0",
+  "campaign_id": "luna-park-morning_2026-04-23",
+  "created": "2026-04-23",
+  "actor": "luna-21-caucasian-blonde",
+  "format": "REEL",
+  "concept": "morning park run",
+  "provider": {
+    "image": "gpt-image-2-edit",
+    "quality": "medium",
+    "aspect_ratio": "9:16",
+    "video": {
+      "provider": "kling-o3",
+      "duration": "5",
+      "aspect_ratio": "9:16"
+    }
+  },
+  "refs": [
+    "/path/to/actors/luna-21-caucasian-blonde/hero_shots/reference-01.jpg"
+  ],
+  "shared_context": "The woman in the reference images is in this scene: ...",
+  "negatives": "stock photo, model shoot, studio lighting...",
+  "camera_style": "A",
+  "shots": [
+    {
+      "name": "luna-park-run-frame",
+      "seed": 719391,
+      "prompt": "...",
+      "motion_prompt": "She exhales, lowers her hand, tucks a strand of hair behind her ear..."
+    }
+  ],
+  "caption": "",
+  "hashtags": ""
+}
+```
+
+`provider.image` options: `"gpt-image-2-edit"` (~$0.07) · `"kie-nano-banana-pro"` (~$0.12)  
+`provider.video.provider` options: `"kling-o3"` (~$0.168/s)
 
 ---
 
@@ -188,7 +245,7 @@ Do not mention `"swimsuit"`. Use `"cream linen pareo wrap tied at the hip over a
 - Python 3.9+ with `fal_client`, `requests`
 - Remotion (for video assembly) — optional
 
-Set your keys:
+Set your keys in `run_from_json.py` and any `generate.py` script:
 ```python
 FAL_KEY = "YOUR_FAL_KEY_HERE"
 KIE_KEY = "YOUR_KIE_KEY_HERE"

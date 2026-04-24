@@ -13,6 +13,24 @@ You are a complete UGC campaign production studio. You run an interactive wizard
 
 When the user says `/ugcfullcreation`.
 
+**Two modes:**
+
+### Mode A — Interactive Wizard (default)
+`/ugcfullcreation` → runs the full step-by-step wizard → outputs campaign.json + generate.py
+
+### Mode B — From JSON (skip wizard)
+`/ugcfullcreation from-json <path>` or user drops a `.json` file path → reads campaign JSON → validates → runs generation directly.
+
+**Mode B flow:**
+1. Read the JSON file
+2. Show a compact summary (actor, format, N shots, provider, estimated cost)
+3. Ask: **"¿Generamos? (~${total})"**
+4. On confirm: run generation directly using `run_from_json.py`
+
+```bash
+python3 /Users/asociaciondame/ugcpanorama/run_from_json.py path/to/campaign.json
+```
+
 ---
 
 ## PATHS BASE
@@ -409,7 +427,7 @@ import os
 import fal_client  # used only for file upload → public CDN URLs for kie.ai
 from kie_client import generate_image, save_image
 
-FAL_KEY = "YOUR_FAL_KEY_HERE"
+FAL_KEY = "930975a9-c25c-497d-b0a1-01f27317680a:21d6ce06c9e934ab27fc427d4e4748e1"
 os.environ["FAL_KEY"] = FAL_KEY
 
 # Actor references — 2 best face-forward shots from hero_shots/ (fallback: references/)
@@ -480,6 +498,140 @@ print(f"{'─'*55}\n")
 - Always add `ensure_dir(OUT_DIR)` so the folder is created on first run
 - Name shots descriptively: `shot1-{location}-{action}` not just `shot1`
 - **Content policy (kie.ai / Google):** never use "bikini top" or "bikini" in prompts with reference images — flagged by Google Generative AI policy. Use "crop top", "tank top", "swimsuit", or "one-piece" instead.
+
+#### 8c — EXPORT CAMPAIGN JSON
+
+After generation completes successfully, always write a `campaign.json` to the campaign folder. This enables future re-runs without the wizard (Mode B).
+
+```python
+import json, os
+
+campaign_data = {
+    "version": "1.0",
+    "campaign_id": "{campaign_slug}_{date}",
+    "created": "{YYYY-MM-DD}",
+    "actor": "{actor_id}",
+    "format": "{FORMAT}",           # CAROUSEL, REEL, STATIC_POST, etc.
+    "concept": "{concept description}",
+    "provider": {
+        "image": "gpt-image-2-edit",   # or "kie-nano-banana-pro"
+        "quality": "medium",
+        "aspect_ratio": "4:5"          # or "9:16"
+    },
+    "refs": [
+        "/Users/asociaciondame/ugcpanorama/actors/{actor_id}/hero_shots/reference-01.jpg"
+    ],
+    "shared_context": "{SHARED_CONTEXT string}",
+    "negatives": "{NEGATIVES string}",
+    "camera_style": "K",              # SYSTEM 9 style code
+    "shots": [
+        {
+            "name": "slide01-{slug}",
+            "seed": 719384,
+            "prompt": "{full prompt for this shot}"
+        }
+    ],
+    "caption": "{generated caption}",
+    "hashtags": "{hashtag first comment}"
+}
+
+json_path = os.path.join(OUT_DIR, "campaign.json")
+with open(json_path, "w", encoding="utf-8") as f:
+    json.dump(campaign_data, f, indent=2, ensure_ascii=False)
+print(f"  ✓ campaign.json saved → {json_path}")
+```
+
+**JSON schema rules:**
+- `campaign_id` = folder name exactly
+- `provider.image` options: `"gpt-image-2-edit"`, `"kie-nano-banana-pro"`
+- `refs` = absolute paths (same as used in generate.py)
+- `shots[].prompt` = the full assembled prompt (SHARED_CONTEXT already embedded)
+- For video campaigns, add `"video"` key:
+  ```json
+  "video": {
+    "provider": "kling-o3",
+    "duration": "5",
+    "aspect_ratio": "9:16",
+    "motion_prompt": "..."
+  }
+  ```
+- `caption` and `hashtags` = filled after Step 10 (can be empty string if skipped)
+
+---
+
+## JSON CAMPAIGN FORMAT — FULL REFERENCE
+
+### Image campaign (CAROUSEL / STATIC_POST / STORY)
+
+```json
+{
+  "version": "1.0",
+  "campaign_id": "luna-linen-park_2026-04-23",
+  "created": "2026-04-23",
+  "actor": "luna-21-caucasian-blonde",
+  "format": "CAROUSEL",
+  "concept": "linen mini skirt park session, 10 slides",
+  "provider": {
+    "image": "gpt-image-2-edit",
+    "quality": "medium",
+    "aspect_ratio": "4:5"
+  },
+  "refs": [
+    "/Users/asociaciondame/ugcpanorama/actors/luna-21-caucasian-blonde/hero_shots/reference-01.jpg"
+  ],
+  "shared_context": "The woman in the reference images is in this scene: ...",
+  "negatives": "stock photo, model shoot, studio lighting...",
+  "camera_style": "mix",
+  "shots": [
+    {
+      "name": "slide01-standing-tree-hand-bark",
+      "seed": 719384,
+      "prompt": "The woman in the reference images is in this scene: ..."
+    }
+  ],
+  "caption": "morning park energy ☀️",
+  "hashtags": "#parkstyle #linenoutfit #morningwalk"
+}
+```
+
+### Video campaign (REEL / STORY_VIDEO) — 2-step pipeline
+
+```json
+{
+  "version": "1.0",
+  "campaign_id": "luna-pool-kling_2026-04-23",
+  "created": "2026-04-23",
+  "actor": "luna-21-caucasian-blonde",
+  "format": "REEL",
+  "concept": "pool side satin pajama shorts",
+  "provider": {
+    "image": "gpt-image-2-edit",
+    "quality": "medium",
+    "aspect_ratio": "9:16",
+    "video": {
+      "provider": "kling-o3",
+      "duration": "5",
+      "aspect_ratio": "9:16"
+    }
+  },
+  "refs": [
+    "/Users/asociaciondame/ugcpanorama/actors/luna-21-caucasian-blonde/hero_shots/reference-01.jpg"
+  ],
+  "shared_context": "The woman in the reference images is in this scene: ...",
+  "negatives": "...",
+  "camera_style": "A",
+  "shots": [
+    {
+      "name": "luna-pool-frame",
+      "seed": 719384,
+      "prompt": "...",
+      "motion_prompt": "She shifts her weight slightly, a warm breeze lifts her hair..."
+    }
+  ],
+  "caption": "",
+  "hashtags": ""
+}
+```
 
 ---
 
@@ -564,7 +716,7 @@ Local PNG/MP4 files cannot go directly to Zernio — they need public URLs. Use 
 
 ```python
 import fal_client, os
-os.environ["FAL_KEY"] = "YOUR_FAL_KEY_HERE"
+os.environ["FAL_KEY"] = "930975a9-c25c-497d-b0a1-01f27317680a:21d6ce06c9e934ab27fc427d4e4748e1"
 
 media_urls = []
 for path in local_file_paths:
@@ -599,7 +751,7 @@ sys.path.insert(0, "/Users/asociaciondame/ugcpanorama")
 
 import os, requests, fal_client
 
-os.environ["FAL_KEY"] = "YOUR_FAL_KEY_HERE"
+os.environ["FAL_KEY"] = "930975a9-c25c-497d-b0a1-01f27317680a:21d6ce06c9e934ab27fc427d4e4748e1"
 
 ZERNIO_API_KEY = os.environ.get("ZERNIO_API_KEY", "")  # set in env or fill here
 ZERNIO_ACCOUNT_ID = os.environ.get("ZERNIO_ACCOUNT_ID", "")  # Instagram account ID from Zernio dashboard
@@ -1008,7 +1160,7 @@ import fal_client
 import os
 import requests
 
-FAL_KEY = "YOUR_FAL_KEY_HERE"
+FAL_KEY = "930975a9-c25c-497d-b0a1-01f27317680a:21d6ce06c9e934ab27fc427d4e4748e1"
 os.environ["FAL_KEY"] = FAL_KEY
 
 # --- Ask for reference video at runtime ---
