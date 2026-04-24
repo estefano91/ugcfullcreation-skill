@@ -1,0 +1,26 @@
+# Generated assets
+campaigns/
+selec/
+db/
+
+# Actor references (personal images)
+actors/
+
+# Scripts with hardcoded API keys
+kie_client.py
+generate_glacia.py
+generate_ref_casual.py
+apify_scraper.py
+show_profile.py
+
+# Prompt JSONs (private)
+JSONs/
+
+# Platform (Next.js app)
+platform/
+
+# System
+.DS_Store
+__pycache__/
+*.pyc
+.env

@@ -1,6 +1,6 @@
 ---
 name: ugcfullcreation
-description: Full UGC campaign creation wizard — format-aware flow, actor identity, 6-layer prompt system, iPhone camera profiles, realism engine, generate.py output, Remotion video assembly, and caption writing. Use when user says /ugcfullcreation.
+description: Full UGC campaign creation wizard — format-aware flow, actor identity, 6-layer prompt system, iPhone camera profiles, realism engine, generate.py output, Remotion video assembly, and caption writing. Supports campaign.json swap (C1) and raw arbitrary prompt JSON swap (C2). Use when user says /ugcfullcreation.
 ---
 
 # /ugcfullcreation — Full UGC Campaign Studio
@@ -32,9 +32,22 @@ python3 /Users/asociaciondame/ugcpanorama/run_from_json.py path/to/campaign.json
 ```
 
 ### Mode C — Swap Actor (reuse JSON with different actor)
-`/ugcfullcreation swap-actor <path>` or user says "usa este JSON con [actor]" → reads a campaign JSON, swaps the actor identity, saves a modified JSON, runs generation.
+`/ugcfullcreation swap-actor <path>` or user says "usa este JSON con [actor]" → reads a JSON file, detects its format, swaps in the chosen actor, and generates.
 
-**Mode C flow:**
+#### AUTO-DETECTION: campaign.json vs raw prompt JSON
+
+**First thing after reading the file: check the JSON structure.**
+
+- If the JSON has `version`, `campaign_id`, and `shots` at the top level → **C1: Campaign Swap** (standard format)
+- Otherwise (e.g., has `subject`, or any arbitrary structure) → **C2: Raw Prompt JSON Swap** (new behavior)
+
+Never assume format. Always detect from content.
+
+---
+
+#### C1 — Campaign Swap (standard campaign.json format)
+
+**Flow:**
 1. Read the JSON file
 2. Show compact summary of the **source** JSON:
    ```
@@ -78,6 +91,159 @@ python3 /Users/asociaciondame/ugcpanorama/run_from_json.py path/to/campaign.json
 **Output folder:** `campaigns/{new_actor_short}-from-{original_id}_{date}/`
 **Modified JSON saved to:** `{output_folder}/campaign.json` — fully re-runnable
 **Output files named:** `{original_shot_name}--{new_actor_short}.png` (or `.mp4`)
+
+---
+
+#### C2 — Raw Prompt JSON Swap (arbitrary prompt JSON, not campaign format)
+
+Used when the JSON is any arbitrary structure defining an image generation prompt — e.g., a `subject` block, a flat prompt dict, a Midjourney-style parameters file, etc. The JSON defines the scene/shot; the actor identity will be injected into it.
+
+**Flow:**
+
+1. **Read the JSON file.** Parse whatever structure it has.
+
+2. **Show a human-readable summary** by extracting the key creative fields:
+   ```
+   SOURCE JSON — {filename}  [raw prompt JSON]
+   ─────────────────────────────────────────
+     Escena:       {scene/setting extracted from JSON}
+     Pose:         {pose or action extracted}
+     Outfit:       {clothing extracted}
+     Fotografía:   {camera style / aspect ratio extracted}
+     Fondo:        {background extracted}
+   ─────────────────────────────────────────
+   ```
+   If the JSON doesn't have obvious scene/pose/outfit fields, summarize what it describes in plain language.
+
+3. **Content policy check.** Scan the JSON for known risk combinations (see SYSTEM 8 content policy matrix). If any are found, flag them visibly before asking about the actor:
+   ```
+   ⚠ RIESGO DE CONTENT POLICY
+     {specific risk detected — e.g., "lace + bedroom at night + bare legs + ref images = alto riesgo de bloqueo"}
+     → Opción: adaptar outfit a {safe alternative} para que pase limpio.
+     ¿Ajustamos el outfit o generamos tal como está?
+   ```
+   Wait for the user's answer before proceeding.
+
+4. **Show the actor roster and ask which actor to use.**
+
+5. **Load the chosen actor's `actor_card.json`** → extract `consistency_anchor`, `prompt_seed`, ref paths (2 from `hero_shots/`, fallback `references/`).
+
+6. **Show swap preview:**
+   ```
+   SWAP PREVIEW — C2 Raw Prompt
+   ─────────────────────────────────────────
+     JSON fuente:   {filename}
+     Actor:         {actor_id}
+     Identidad:     {first 100 chars of consistency_anchor} ...
+     Refs:          {ref path 1}
+                    {ref path 2}
+     Provider:      GPT Image 2 edit (~$0.07)
+     Output folder: campaigns/{actor_short}-rawjson-{json_slug}_{date}/
+     Output file:   {actor_short}-{json_slug}.png
+   ─────────────────────────────────────────
+   ```
+
+7. **Show cost estimate. Ask: "¿Generamos? (~$0.07)"**
+
+8. **On confirm: build and execute a generate.py on the fly.**
+
+   Do NOT use `run_from_json.py` — the raw JSON is not campaign format. Instead, build the prompt and script directly:
+
+   **How to build the prompt from a raw JSON:**
+   - Extract the scene/action/outfit/camera/background/constraints from the JSON (whatever fields exist)
+   - Build a single prompt string:
+     ```
+     {actor.consistency_anchor} [injected as the character identity anchor]
+     {scene description extracted from JSON — verbatim or closely adapted}
+     {outfit from JSON — adjusted for content policy if user approved}
+     {photography style from JSON}
+     {background from JSON}
+     {realism anchors from SYSTEM 2 — always inject all 10}
+     Negative: {negatives from JSON constraints.avoid + universal negatives from SYSTEM 4 Layer 6}
+     ```
+   - The actor's `consistency_anchor` replaces any identity/subject description in the original JSON. Everything else (scene, pose, outfit, camera, background) stays as close to the original JSON as possible.
+
+   **generate.py template for C2:**
+   ```python
+   """
+   Raw JSON swap — {json_filename} × {actor_id}
+   Provider: GPT Image 2 edit (~$0.07)
+   Date: {YYYY-MM-DD}
+   """
+   import sys
+   sys.path.insert(0, "/Users/asociaciondame/ugcpanorama")
+
+   import os, requests, fal_client
+
+   FAL_KEY = "930975a9-c25c-497d-b0a1-01f27317680a:21d6ce06c9e934ab27fc427d4e4748e1"
+   os.environ["FAL_KEY"] = FAL_KEY
+
+   REFS = [
+       "/Users/asociaciondame/ugcpanorama/actors/{actor_id}/hero_shots/reference-01.jpg",
+       "/Users/asociaciondame/ugcpanorama/actors/{actor_id}/hero_shots/{second_ref}",
+   ]
+
+   OUT_DIR = "/Users/asociaciondame/ugcpanorama/campaigns/{actor_short}-rawjson-{json_slug}_{date}"
+   OUT_FILE = os.path.join(OUT_DIR, "{actor_short}-{json_slug}.png")
+
+   PROMPT = (
+       "{actor.consistency_anchor} "
+       "{scene extracted from raw JSON — all creative content preserved, identity replaced} "
+       "Realism: {all 10 SYSTEM 2 anchors concatenated} "
+       "Negative: {negatives from JSON + universal negatives}"
+   )
+
+   def ensure_dir(path):
+       os.makedirs(path, exist_ok=True)
+
+   ensure_dir(OUT_DIR)
+
+   print(f"\n── Uploading {len(REFS)} reference image(s) ──")
+   ref_urls = []
+   for ref_path in REFS:
+       url = fal_client.upload_file(ref_path)
+       ref_urls.append(url)
+       print(f"  ✓ {os.path.basename(ref_path)}")
+
+   print(f"\n── Generating via GPT Image 2 edit ──\n")
+
+   result = fal_client.subscribe("openai/gpt-image-2/edit", arguments={
+       "prompt": PROMPT,
+       "image_urls": ref_urls,
+       "quality": "medium",
+       "seed": {actor.prompt_seed},
+   })
+
+   img_url = result["images"][0]["url"]
+   with open(OUT_FILE, "wb") as f:
+       f.write(requests.get(img_url).content)
+   print(f"  ✓ Saved → {OUT_FILE}")
+
+   print(f"\n{'─'*55}")
+   print(f"  Done — {actor_short}-rawjson-{json_slug}_{date}")
+   print(f"{'─'*55}\n")
+   ```
+
+9. **Write the script** to `campaigns/{actor_short}-rawjson-{json_slug}_{date}/generate.py` and **execute immediately** via Bash.
+
+10. **Confirm** by listing generated files in the output folder.
+
+**Naming convention for C2:**
+- `json_slug` = filename without extension, lowercased, spaces→hyphens (e.g., `pruebajson`)
+- Output folder: `campaigns/{actor_short}-rawjson-{json_slug}_{YYYY-MM-DD}/`
+- Output file: `{actor_short}-{json_slug}.png`
+- generate.py saved alongside the output
+
+**What C2 changes vs the original JSON:**
+- Identity/subject description → replaced with actor's `consistency_anchor`
+- Reference images → actor's 2 best refs
+- Everything else (scene, pose, outfit, camera, background, constraints) → preserved as faithfully as possible
+- Content policy adjustments → only if user approved the change in step 3
+
+**What C2 does NOT do:**
+- Does not convert the raw JSON into campaign.json format
+- Does not use `run_from_json.py`
+- Does not add wizard steps (concept, art direction, etc.) — the JSON already defines those
 
 ---
 
