@@ -1819,6 +1819,7 @@ Character consistency with GPT Image 2 edit:
   - BLOCKS: (ref images) + (leggings + crop top) + (indoor gym) — form-fitting bottom + exposed midriff + indoor = block
   - BLOCKS: (ref images) + (close-up selfie face) + ("post-workout" / flush language) + (4th+ request in session) — cumulative session blocking after 3 images
   - BLOCKS: (ref images) + (legs lifted high toward camera) + (shorts/boyshorts) + (bed/floor) — exaggerated leg perspective from below with refs = hard block even with safe cotton clothing. Confirmed 2026-04-24 (Luna × pruebajson). Workaround: seat actor with legs under/behind duvet, frame medium shot waist-up. Alternative: switch to Nano Banana Pro which uses a different content filter.
+  - BLOCKS: (ref images) + (satin/silk slip dress or thin-strap dress) + (back partially visible) + (any pose) — "back partially visible" + thin straps = filter reads as exposed skin/back. Confirmed 2026-04-24 (Eva over-shoulder pose). Fix: same pose with jeans + tank top (back fully covered). Passed immediately.
   - PATTERN: GPT Image 2 edit consistently blocks the 4th slide when refs are used — slides 1-3 pass, slide 4 blocks on first attempt regardless of content. Fix: mark 1-3 as DONE, rephrase slide 4 slightly, retry. Slides 4-5 then pass.
   - RULE: the filter triggers on (intimate/revealing clothing context) + (ref images of real-looking person) — the setting matters: bedroom at night is higher risk than outdoor daytime. Satin/silk/lace terms elevate risk vs cotton/linen. Leggings are safe outdoors with a covering top. Exaggerated leg perspective (legs toward camera) with bed + shorts = block regardless of clothing modesty. Use 1 ref max (not 2) to reduce cumulative session pressure. Workaround for slide 4 block: rephrase + DONE set skip.
   - AUTO-FALLBACK RULE: If GPT Image 2 edit throws `content_policy_violation`, the generate.py template should automatically retry via Nano Banana Pro with a condensed PROMPT_SHORT (3-5 sentences, scene-focused). This avoids manual intervention for content policy edge cases. See C2 generate.py template for the try/except pattern.
@@ -2055,6 +2056,7 @@ The stricter of the two GPT Image 2 modes because it combines real-looking perso
 | Date | Actor | Trigger combination | Notes |
 |---|---|---|---|
 | 2026-04-24 | luna-21-caucasian-blonde | Legs lifted high toward camera + grey cotton boyshorts + lying on bed + 2 ref images | Blocked immediately. Clothing is safe (cotton boyshorts) but the POSE — legs pointing at camera from a low angle — combined with real refs = hard block. Outfit modesty is irrelevant when pose emphasizes lower body toward camera with refs present. |
+| 2026-04-24 | eva-22-caucasian-blonde | Cream satin slip dress + thin straps + "back partially visible" + over-shoulder pose + 2 ref images | Blocked. The phrase "back partially visible" + "thin straps" is read by the filter as exposed skin/bare back, even though a slip dress covers the torso. The over-shoulder pose with back framing amplified the risk. Fix: same over-shoulder pose with jeans + white tank top (back fully covered). Passed on first retry. |
 | Prior | (various) | Swimwear/bikini + ref images | Blocks regardless of setting or pose |
 | Prior | (various) | Satin/silk sleep shorts + bedroom at night + ref images | Block |
 | Prior | (various) | Kneeling on bed, back to camera + shorts + ref images | Block |
@@ -2067,6 +2069,7 @@ The stricter of the two GPT Image 2 modes because it combines real-looking perso
 | Date | Actor | Combination | Notes |
 |---|---|---|---|
 | 2026-04-24 | luna-21-caucasian-blonde | Sitting up in bed, legs under duvet, medium shot waist-up + oversized cotton tee + 2 ref images | All 3 variants passed. Pose changed from legs-toward-camera to seated with legs covered — that was the fix. |
+| 2026-04-24 | eva-22-caucasian-blonde | Over-shoulder pose + jeans + white tank top (back fully covered) + 2 ref images | Passed. Same pose as the blocked version (ref-16) — only outfit changed. Back visibility was the trigger, not the pose itself. |
 | Prior | (various) | Oversized tee + cotton shorts + bedroom morning light + ref images | Passes |
 | Prior | (various) | Crop top + linen shorts + outdoor daytime + ref images | Passes |
 | Prior | (various) | Athletic shorts + sports tank + outdoor beach volleyball + ref images | Passes |
@@ -2077,6 +2080,7 @@ The stricter of the two GPT Image 2 modes because it combines real-looking perso
 - **Legs-toward-camera pose + bed**: seat actor with legs under/behind duvet, frame medium shot from waist up. All lower body implied, not shown.
 - **4th generation block in session**: rephrase the prompt slightly (add/remove one sentence), change seed, retry. Usually passes on next attempt.
 - **Any persistent block**: fall back to Nano Banana Pro with condensed PROMPT_SHORT. Different content filter, different training — what GPT blocks, Nano Banana often passes.
+- **Slip dress / thin-strap + back visible**: switch to jeans + tank top (back fully covered) for the same pose. The filter reads "back partially visible" + "thin straps" as exposed skin regardless of actual coverage. Same pose passes with covered-back outfit.
 
 ---
 
