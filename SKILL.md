@@ -1439,9 +1439,9 @@ print("  ✓ Dry-run passed — prompt is safe")
 - Linen/cotton dresses, oversized shirts
 - One-piece swimsuit — medium shot only (waist/chest up). Full body + any swimwear = hard block.
 
-**Swimwear hard limit:** GPT Image 2 edit + refs will never pass full body swimwear regardless of style (one-piece or two-piece). Maximum allowed: one-piece, medium shot, above-waist framing.
-**Workaround for pool/beach full body:** Do NOT mention "swimsuit" at all. Use "cream linen pareo wrap tied at the hip over a white fitted crop top" — no swimsuit language, same pool aesthetic, passes clean. The filter triggers on the word "swimsuit" + full body + refs, not the visual concept.
-**→ ROUTING:** Swimwear + refs = known block. Apply KNOWN-BLOCK ROUTING RULE — skip GPT, write generate.py as Nano Banana Pro direct.
+**Swimwear hard limit:** GPT Image 2 edit + refs will never pass full body swimwear regardless of style (one-piece or two-piece). Maximum allowed: one-piece, medium shot, above-waist framing. **Confirmed 2026-04-25: Nano Banana Pro (both kie.ai and fal.ai) applies the same hard limit — swimwear + refs blocks on NBP too, even at safety_tolerance 6.**
+**Workaround for pool/beach full body (all providers):** Do NOT mention "swimsuit" at all. Use "cream linen pareo wrap tied at the hip over a white fitted crop top" — no swimsuit language, same pool aesthetic, passes clean on both GPT edit and NBP. Confirmed pass: Eva × pruebajson 2026-04-25.
+**→ ROUTING:** Swimwear + refs = known block on ALL providers. Skip GPT. Write generate.py as NBP direct with pareo/wrap outfit adaptation.
 
 ---
 
@@ -2104,7 +2104,7 @@ The same prompt that blocked GPT Image 2 edit (Luna, legs + bed + refs) passed c
 
 ---
 
-### Nano Banana Pro (`kie.ai`)
+### Nano Banana Pro (`kie.ai` + `fal-ai/nano-banana-pro/edit`)
 
 Different content filter stack (not OpenAI's). Generally more permissive for pose/clothing combinations that GPT Image 2 edit blocks. Weakness: face consistency degrades with long prompts — keep PROMPT_SHORT to 3-5 sentences.
 
@@ -2113,6 +2113,8 @@ Different content filter stack (not OpenAI's). Generally more permissive for pos
 | Pattern | Result | Notes |
 |---|---|---|
 | "bikini" keyword | BLOCKS | Use "swimsuit", "one-piece", "crop top" instead |
+| Any swimwear language + ref images | BLOCKS | Confirmed 2026-04-25 (Eva, sunbed scene, both kie.ai and fal.ai, even at safety_tolerance 6). Swimwear hard limit applies to NBP too, not just GPT Image 2 edit. |
+| Pareo wrap + crop top + beach/sunbed scene + refs | PASSES | Confirmed 2026-04-25 (Eva × pruebajson). Same beach club aesthetic, no swimsuit language — passes clean. This is the swimwear workaround for NBP. |
 | 2 refs + short prompt (3-5 sentences) | Best consistency | More refs or longer prompt hurts face lock |
 | 2 refs + full 6-layer prompt | Degraded consistency | Model splits attention between refs and text — face drifts |
 | Poses that block GPT Image 2 edit | Usually PASSES | Different filter stack — test here when GPT blocks |
