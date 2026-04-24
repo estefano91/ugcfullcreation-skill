@@ -1441,6 +1441,7 @@ print("  ✓ Dry-run passed — prompt is safe")
 
 **Swimwear hard limit:** GPT Image 2 edit + refs will never pass full body swimwear regardless of style (one-piece or two-piece). Maximum allowed: one-piece, medium shot, above-waist framing.
 **Workaround for pool/beach full body:** Do NOT mention "swimsuit" at all. Use "cream linen pareo wrap tied at the hip over a white fitted crop top" — no swimsuit language, same pool aesthetic, passes clean. The filter triggers on the word "swimsuit" + full body + refs, not the visual concept.
+**→ ROUTING:** Swimwear + refs = known block. Apply KNOWN-BLOCK ROUTING RULE — skip GPT, write generate.py as Nano Banana Pro direct.
 
 ---
 
@@ -1823,6 +1824,7 @@ Character consistency with GPT Image 2 edit:
   - PATTERN: GPT Image 2 edit consistently blocks the 4th slide when refs are used — slides 1-3 pass, slide 4 blocks on first attempt regardless of content. Fix: mark 1-3 as DONE, rephrase slide 4 slightly, retry. Slides 4-5 then pass.
   - RULE: the filter triggers on (intimate/revealing clothing context) + (ref images of real-looking person) — the setting matters: bedroom at night is higher risk than outdoor daytime. Satin/silk/lace terms elevate risk vs cotton/linen. Leggings are safe outdoors with a covering top. Exaggerated leg perspective (legs toward camera) with bed + shorts = block regardless of clothing modesty. Use 1 ref max (not 2) to reduce cumulative session pressure. Workaround for slide 4 block: rephrase + DONE set skip.
   - AUTO-FALLBACK RULE: If GPT Image 2 edit throws `content_policy_violation`, the generate.py template should automatically retry via Nano Banana Pro with a condensed PROMPT_SHORT (3-5 sentences, scene-focused). This avoids manual intervention for content policy edge cases. See C2 generate.py template for the try/except pattern.
+  - **KNOWN-BLOCK ROUTING RULE (2026-04-25):** If SYSTEM 8/10 already confirms the scene will block GPT Image 2 edit (e.g., swimwear + refs, slip dress + back visible + refs), do NOT attempt GPT first. Skip GPT entirely and generate directly with Nano Banana Pro. Every GPT attempt costs ~$0.07 even when blocked — wasting credits on a known outcome is not acceptable. Apply this rule at script-writing time: if the block is predictable from the trigger matrix, write the generate.py as NBP-direct (no try/except wrapper, no GPT call at all).
 
 For all fal.ai models: save the image with `requests.get(image_url).content` and write to `out_path`.
 
