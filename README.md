@@ -22,6 +22,20 @@ python3 /Users/asociaciondame/ugcpanorama/run_from_json.py campaigns/my-campaign
 ```
 Reads a `campaign.json`, shows cost estimate, confirms, then generates directly.
 
+### Mode C — Swap Actor (reuse JSON with different actor)
+```
+/ugcfullcreation swap-actor <path/to/campaign.json>
+```
+Or run directly:
+```bash
+python3 /Users/asociaciondame/ugcpanorama/run_from_json.py campaigns/my-campaign/campaign.json --actor glacia-24-nordic-asian
+```
+Reads a campaign JSON, swaps the actor identity (context, refs), saves the modified JSON to a new folder, and generates. Output files are named `{original_shot_name}--{new_actor}.ext` so the source JSON is always traceable.
+
+**What swaps:** actor field, shared_context, refs, context prefix in every shot prompt.  
+**What stays:** scene, location, outfit, action, camera, realism, motion_prompt.  
+**Output folder:** `campaigns/{new_actor_short}-from-{original_campaign_id}/`
+
 ---
 
 ## Formats

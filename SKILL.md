@@ -31,6 +31,54 @@ When the user says `/ugcfullcreation`.
 python3 /Users/asociaciondame/ugcpanorama/run_from_json.py path/to/campaign.json
 ```
 
+### Mode C — Swap Actor (reuse JSON with different actor)
+`/ugcfullcreation swap-actor <path>` or user says "usa este JSON con [actor]" → reads a campaign JSON, swaps the actor identity, saves a modified JSON, runs generation.
+
+**Mode C flow:**
+1. Read the JSON file
+2. Show compact summary of the **source** JSON:
+   ```
+   SOURCE JSON — {campaign_id}
+     Actor:    {original actor}
+     Concept:  {concept}
+     Format:   {format} / {reel_type if REEL}
+     Shots:    {N}
+     Provider: {provider}
+   ```
+3. Show the actor roster and ask: **"¿Qué actor quieres usar?"**
+4. Load the new actor's `actor_card.json` → extract `consistency_anchor`
+5. Show what will change:
+   ```
+   SWAP PREVIEW
+   ─────────────────────────────────────────
+     Original actor:  {old_actor_id}
+     New actor:       {new_actor_id}
+     Context:         {first 80 chars of old} ...
+               →      {first 80 chars of new} ...
+     Refs:            {new ref paths — 2 from hero_shots/ or references/}
+     Output folder:   campaigns/{new_actor_short}-from-{original_id}_{date}/
+     Output files:    {shot_name}--{new_actor_short}.png  (or .mp4)
+   ─────────────────────────────────────────
+   ```
+6. Show cost estimate. Ask: **"¿Generamos? (~${total})"**
+7. On confirm:
+   ```bash
+   python3 /Users/asociaciondame/ugcpanorama/run_from_json.py path/to/campaign.json --actor {new_actor_id}
+   ```
+
+**What the swap changes:**
+- `actor` field → new actor ID
+- `shared_context` → rebuilt from new actor's `consistency_anchor`
+- `refs` → 2 best refs from new actor's `hero_shots/` (fallback: `references/`)
+- Each `shots[].prompt` → context prefix replaced with new actor's context
+- `campaign_id` → `{new_actor_short}-from-{original_campaign_id}`
+
+**What stays the same:** scene, location, outfit, action, camera, realism layers, motion_prompt — only the identity anchor swaps.
+
+**Output folder:** `campaigns/{new_actor_short}-from-{original_id}_{date}/`
+**Modified JSON saved to:** `{output_folder}/campaign.json` — fully re-runnable
+**Output files named:** `{original_shot_name}--{new_actor_short}.png` (or `.mp4`)
+
 ---
 
 ## PATHS BASE
