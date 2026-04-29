@@ -2123,6 +2123,8 @@ Different content filter stack (not OpenAI's). Generally more permissive for pos
 | "bikini" keyword | BLOCKS | Use "swimsuit", "one-piece", "crop top" instead |
 | "bikini" + SHORT prompt (3-4 sentences) + refs + "the woman in the reference images" anchor | PASSES | Confirmed 2026-04-25 (Eva, 5 pool shots, safety_tolerance 6). All 5 passed. KEY: short prompt defers identity to refs — no character fingerprint in text. |
 | Any swimwear language + LONG prompt with full character description + refs | BLOCKS | Confirmed 2026-04-25 (Eva × pruebajson). The block is NOT the swimwear word — it's the hyper-specific character description (hex codes, mm measurements) that reads as real-person fingerprint, triggering the stricter filter. Swimwear alone does not block NBP. |
+| "lying on beach towel" + "propped on elbows" + "teasing smile" + "close-up" + bikini + refs | BLOCKS | Confirmed 2026-04-29 (Eva, beach-04, 10-shot session). Fix: change to seated upright on towel + natural/relaxed smile + medium shot. Passed on first retry. |
+| Lying on stomach, full body visible, arms folded under chin, legs relaxed + bikini + refs | PASSES | Confirmed 2026-04-25 (Eva, 5-shot beach-01). Full body lying pose passes when framing is wide and pose is passive (no propped/teasing combo). |
 | Pareo wrap + crop top + beach/sunbed scene + refs | PASSES | Confirmed 2026-04-25 (Eva × pruebajson). Workaround — same pool aesthetic, no swimsuit language. |
 | 2 refs + short prompt (3-5 sentences) | Best consistency | More refs or longer prompt hurts face lock |
 | 2 refs + full 6-layer prompt | Degraded consistency | Model splits attention between refs and text — face drifts |
