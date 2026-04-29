@@ -1,395 +1,204 @@
-# UGC Panorama — AI UGC Production Studio
+# ugcfullcreation — AI UGC Production Studio
 
-Production studio for generating photorealistic UGC content using AI image and video models. Runs as a Claude Code skill (`/ugcfullcreation`) with four operational modes.
+A Claude Code skill that turns you into a one-person content studio. You describe what you want, it generates the images and videos, writes the captions, and prepares everything for publishing to Instagram.
 
----
-
-## Architecture
-
-```
-ugcpanorama/
-├── actors/                    # Actor identity cards + reference images
-│   └── {actor_id}/
-│       ├── actor_card.json    # Identity anchor, prompt_seed, physical descriptors
-│       ├── content_profile.json
-│       ├── hero_shots/        # Best face references (preferred)
-│       └── references/        # Fallback references
-├── campaigns/                 # Generated output — one folder per run
-│   └── {campaign_id}/
-│       ├── generate.py        # Self-contained generation script
-│       ├── campaign.json      # Re-runnable campaign definition
-│       └── *.png / *.mp4      # Generated assets
-├── JSONs/                     # Raw prompt JSONs for Mode C2
-├── run_from_json.py           # Execution engine for Mode B and C1
-├── kie_client.py              # kie.ai API wrapper
-└── apify_scraper.py           # Instagram scraper for trend research
-```
-
-### Actor Roster
-
-| actor_id | Age | Ethnicity | Notes |
-|---|---|---|---|
-| `glacia-24-nordic-asian` | 22-27 | Finnish-born East Asian-Nordic mix | 13 refs, best consistency |
-| `luna-21-caucasian-blonde` | 21 | Caucasian | 1 ref, freckles, pearl choker |
-| `mia-23-mediterranean` | 23 | Mediterranean | 1 ref, dense freckles, dark brows |
-| `rowan-22-redhead` | 22 | Fair/Celtic | 1 ref, copper-auburn hair |
-| `nova-22-caucasian-blonde` | 22 | Caucasian blonde | 0 refs — prompt-only |
-| `eva-22-caucasian-blonde` | 22 | Caucasian | 0 refs — warm golden blonde, blue-grey eyes, mole above right lip, slim narrow waist |
+No design tools. No photographers. No agencies.
 
 ---
 
-## Modes
+## What it can do
 
-### Mode A — Interactive Wizard
-
-**Trigger:** `/ugcfullcreation`
-
-Full step-by-step wizard. Goes from zero to a complete campaign folder with generate.py, prompts, and caption. Best when starting fresh with no existing reference material.
-
-**Flow:** FORMAT → ACTOR → CONCEPT → (TREND RESEARCH) → ART DIRECTION → SHOTS → GENERATE → CAPTION → PUBLISH
-
-**Use cases:**
-
-| Scenario | Example |
-|---|---|
-| New product launch | Brand new skincare serum, no existing content |
-| Lifestyle campaign from scratch | Actor at golden hour pool — no product |
-| Seasonal content | Summer travel carousel for glacia |
-| Multi-actor campaign | luna + mia at the gym together |
-| New actor onboarding | User provides reference image → system extracts actor card |
-
-**Format examples:**
-
-```
-/ugcfullcreation
-→ Pick format: CAROUSEL
-→ Pick actor: mia-23-mediterranean
-→ Concept: "morning coffee ritual, linen, terrace, 6 slides"
-→ Art direction: warm terrace light, Fujifilm X100VI style
-→ Output: campaigns/mia-coffee-terrace_2026-04-24/
-```
-
-```
-/ugcfullcreation
-→ Pick format: REEL (AMBIENT)
-→ Pick actor: glacia-24-nordic-asian
-→ Concept: "pool side, golden hour, hair and water moving"
-→ Output: campaigns/glacia-pool-ambient_2026-04-24/ (.mp4 via Kling O3)
-```
+- Generate **photorealistic lifestyle and fashion images** of AI actors using reference photos
+- Create **Instagram Reels** (animated 5-second clips) from a single generated frame
+- Publish directly to Instagram through Zernio — no manual upload needed
+- Run **every day automatically** at a time you choose, generating content from a calendar you set up once
+- All of this without you writing a single prompt
 
 ---
 
-### Mode B — From JSON
+## Who it's for
 
-**Trigger:** `/ugcfullcreation from-json <path/to/campaign.json>`
-
-Skips the wizard entirely. Reads an existing campaign.json, shows a summary, asks for confirmation, and runs generation directly via `run_from_json.py`. Best for re-running a known-good campaign or scheduled batch production.
-
-**Requirements:** JSON must be in campaign.json format (has `version`, `campaign_id`, `shots`).
-
-**Flow:** READ JSON → SUMMARY → CONFIRM → GENERATE
-
-**Use cases:**
-
-| Scenario | Example |
-|---|---|
-| Re-run a campaign that partially failed | Slide 3 and 4 need regeneration |
-| Batch production — same campaign, same actor | Run the same 6 slides again with a new seed |
-| Scheduled content generation | Weekly carousel scheduled as a cron job |
-| Reproduce a past result for a client | Re-run exactly what generated last month |
-
-**Format examples:**
-
-```
-/ugcfullcreation from-json campaigns/luna-linen-park_2026-04-23/campaign.json
-→ Shows: actor, format, 6 shots, provider, est. cost $0.42
-→ ¿Generamos? (~$0.42) → confirm
-→ Output: same folder, new images
-```
-
-```
-/ugcfullcreation from-json campaigns/glacia-pool-ambient_2026-04-24/campaign.json
-→ Shows: REEL, Kling O3, 5s, est. cost $0.91
-→ Confirm → regenerates frame + video
-```
+- Creators who want to run an AI model page on Instagram (lifestyle, fashion, aesthetics)
+- Agencies managing multiple accounts and actors
+- Anyone who wants to produce a month of content in an afternoon
 
 ---
 
-### Mode C — Swap Actor
+## Setup — first time
 
-**Trigger:** `/ugcfullcreation swap-actor <path/to/file.json>`
+When you run `/ugcfullcreation` for the first time, it detects that you haven't set up a workspace yet and walks you through 7 questions:
 
-Reuses an existing JSON definition — either a campaign.json or any raw prompt JSON — with a different actor. The scene, pose, outfit, camera, and background stay the same. Only the identity anchor changes.
+1. **Where is your project folder?** (the folder where your actors and content will live)
+2. **What Instagram account are you publishing to?** (handle + your Zernio account ID)
+3. **What kind of content?** Lifestyle, fashion, fitness, beauty, travel, product UGC — or describe your own
+4. **What language and audience?** English/international, Spanish/LatAm, etc.
+5. **What's your monetization?** Content packs via DM, affiliate, brand deals, subscription
+6. **What's your budget per piece?** You decide how much per image and per video — the skill routes to the cheapest model that delivers the quality you need
+7. **Do you want the daily agent?** It can generate content for you every morning and send you a notification to approve before it publishes
 
-Auto-detects JSON format and routes to the correct sub-mode.
-
----
-
-#### C1 — Campaign JSON Swap
-
-**When:** The JSON has `version`, `campaign_id`, and `shots` at the top level.
-
-**Flow:** READ CAMPAIGN JSON → SUMMARY → ACTOR ROSTER → LOAD ACTOR CARD → SWAP PREVIEW → CONFIRM → `run_from_json.py --actor`
-
-The swap rebuilds `shared_context` from the new actor's `consistency_anchor`, updates `refs` to the new actor's 2 best face refs, and replaces the context prefix in every shot's prompt. Everything else — scene, outfit, camera, realism layers — is unchanged.
-
-**Output folder:** `campaigns/{new_actor_short}-from-{original_campaign_id}/`
-**Output files:** `{original_shot_name}--{new_actor_short}.png`
-
-**Use cases:**
-
-| Scenario | Example |
-|---|---|
-| Test the same concept across actors | Run luna's park carousel with mia's face |
-| Client A/B test | Show brand the same shoot with 2 different creator looks |
-| Build a content library fast | 1 art direction × 4 actors = 4× the output |
-| Actor substitution after booking conflict | Campaign planned for rowan, switch to glacia |
-
-**Format examples:**
-
-```
-/ugcfullcreation swap-actor campaigns/luna-linen-park_2026-04-23/campaign.json
-→ SOURCE: luna-21-caucasian-blonde, CAROUSEL, 6 shots, gpt-image-2-edit
-→ ¿Qué actor? → mia-23-mediterranean
-→ SWAP PREVIEW: context replaced, refs swapped to mia's hero_shots/
-→ ¿Generamos? (~$0.42)
-→ Output: campaigns/mia-from-luna-linen-park_2026-04-23/
-         slide01-standing-tree--mia.png
-         slide02-reading-bench--mia.png ...
-```
-
-```
-/ugcfullcreation swap-actor campaigns/glacia-pool-ambient_2026-04-24/campaign.json
-→ REEL campaign, actor swap to rowan-22-redhead
-→ Output: campaigns/rowan-from-glacia-pool-ambient_2026-04-24/
-         glacia-pool-frame--rowan.png + glacia-pool-frame--rowan.mp4
-```
+At the end it writes a `workspace.json` that remembers all of this. Every future run reads that file — you never answer these questions again.
 
 ---
 
-#### C2 — Raw Prompt JSON Swap
+## Your actors
 
-**When:** The JSON is any arbitrary structure that is NOT a campaign.json — e.g., a subject description block, a flat prompt dict, a Midjourney-style parameters file, or any custom prompt format.
+An actor is a folder with a reference photo and an identity card. The skill reads the card to keep the face consistent across every image it generates.
 
-**Flow:** READ JSON → PARSE & SUMMARIZE → CONTENT POLICY CHECK → ACTOR ROSTER → LOAD ACTOR CARD → SWAP PREVIEW → CONFIRM → BUILD & EXECUTE generate.py
+You can have as many actors as you want. Examples of what an actor looks like:
 
-The actor's `consistency_anchor` replaces the identity/subject description in the original JSON. The rest (scene, pose, outfit, camera, background, constraints) is preserved as faithfully as possible and assembled into a 6-layer prompt.
+- **Luna** — 21, blonde, warm peachy skin, round brown eyes, light freckles. Lifestyle and fashion content.
+- **Mia** — 23, Mediterranean, dark wavy hair, golden olive skin, bold brows. Bold fashion and beauty.
+- **Rowan** — 22, redhead, very fair skin, copper-auburn hair, green-grey eyes, freckle scatter. Editorial and autumn tones.
 
-**Output folder:** `campaigns/{actor_short}-rawjson-{json_slug}_{date}/`
-**Output file:** `{actor_short}-{json_slug}.png`
+If you have a new actor, just give the skill a reference image. It extracts the identity card from the photo automatically.
 
-**Content policy check:** Before asking for actor selection, C2 scans the JSON for known risk combinations (lace/silk + bedroom + night + bare skin + ref images). If a risk is found, it flags it and offers a safe outfit alternative before proceeding.
+---
 
-**Use cases:**
+## What you can ask it to do
 
-| Scenario | Example |
-|---|---|
-| Reuse a prompt built in another tool | Midjourney prompt JSON → inject glacia's face |
-| Concept test before building a full campaign | Quick 1-shot test of a scene idea |
-| Client-supplied brief as JSON | Client sends a subject description, you inject your actor |
-| Prompt library → actor injection | Maintain a library of scenes, batch-apply to any actor |
-| Iterate across actors on a proven prompt | "This scene works — run it with all 4 actors" |
+### Create a carousel for your Instagram
 
-**Format examples:**
+You say `/ugcfullcreation` and answer a few questions — which actor, what concept, how many slides. It builds the full prompt, generates each slide, crops everything to the right ratio, and hands you a folder ready to publish.
 
-```
-/ugcfullcreation swap-actor JSONs/pruebajson.json
-→ Detects: raw prompt JSON (has "subject" key, not campaign format)
-→ Summarizes: selfie nocturna habitación, piernas levantadas, camisola lace, smartphone flash, 9:16
-→ ⚠ RIESGO: lace + bedroom at night + bare legs + refs = alto riesgo de bloqueo
-   → Opción: adaptar a oversized tee + cotton shorts — ¿ajustamos?
-→ ¿Qué actor? → glacia-24-nordic-asian
-→ Builds prompt: glacia's consistency_anchor + scene from JSON
-→ ¿Generamos? (~$0.07)
-→ Output: campaigns/glacia-rawjson-pruebajson_2026-04-24/
-         glacia-pruebajson.png
-```
+**Example:**
+> "6-slide carousel for Luna — outdoor terrace, golden hour, white linen outfit, mix of full body and close-up shots"
 
-```
-/ugcfullcreation swap-actor JSONs/editorial-beach.json
-→ Detects: raw prompt JSON
-→ No content policy risks found
-→ ¿Qué actor? → rowan-22-redhead
-→ Output: campaigns/rowan-rawjson-editorial-beach_2026-04-24/
-         rowan-editorial-beach.png
-```
+What you get: 6 cropped images + caption + hashtags + a one-command publish script.
+
+---
+
+### Make a Reel
+
+You pick the actor and describe the vibe. The skill generates a base image first (to lock the face), then animates it into a 5-second clip.
+
+**Examples:**
+
+> "Mia — outdoor terrace, rust wrap dress, hair moving in the breeze, warm and magnetic energy"
+
+> "Luna — POV text reel, outdoor, golden hour, text overlay: 'POV: you found her'"
+
+> "Rowan — copper hair catching the backlight, very atmospheric, slow and dreamy"
+
+What you get: a `.mp4` ready to post, plus the still frame it was built from.
+
+---
+
+### Use the same concept but with a different actor
+
+You have a campaign that worked well for Luna — say it's an outdoor café session in a linen outfit. You want the exact same shoot but with Mia's face.
+
+The skill swaps the identity anchor, keeps everything else identical (scene, outfit, camera style, lighting), and generates a new set. Same art direction, different face.
+
+One concept × four actors = four times the content at a fraction of the work.
+
+---
+
+### Put your actor's face into any scene or prompt
+
+You found a scene you like — a prompt from somewhere, a brief a client sent, a description you wrote. You drop the file and the skill reads it, flags any content risks before spending anything, asks which actor to use, and generates.
+
+---
+
+### Generate content for you every day without doing anything
+
+You build a content calendar once — one row per day with format, actor, concept, and caption. The skill reads it every morning and generates that day's content automatically. You get a notification when it's ready, review it for 2 minutes, and run one command to publish.
+
+**What a typical day looks like:**
+
+- **07:33** — your Mac generates today's content in the background
+- **08:00** — you get a desktop notification: *"6 images ready for Luna carousel. Publish at 09:00."*
+- **08:45** — you open the folder and look at the images
+- **09:00** — you run one command and it posts to Instagram
+
+Total time: under 5 minutes a day.
 
 ---
 
 ## Formats
 
-### STATIC_POST (4:5 — single image, feed)
-
-Single hero image. The most common format. Works for product reveals, lifestyle moments, editorial looks, or bold visual statements.
-
-**Best for:** product launches, brand partnerships, a strong single look, anything meant to stop the scroll.
-
-**Example concepts:**
-- Actor holds product close to camera, golden hour window light, iPhone rear cam
-- Mirror selfie after getting ready, warm bathroom light, messy countertop in background
-- Overhead flatlay — actor's hand holding coffee cup, book, phone arranged on linen surface
-
----
-
-### STORY (9:16 — single image, story frame)
-
-Vertical frame built for stories. More intimate than feed posts. Usually close-up or upper-body. Often pairs with text overlay in the final edit.
-
-**Best for:** product try-on, skincare routine moments, travel snippets, "day in my life" beats.
-
-**Example concepts:**
-- Close-up face, actor mid-laugh, outdoor afternoon light
-- Actor sits cross-legged on hotel bed, looks up from phone — morning light from curtains
-- Product in hand, actor in the background slightly out of focus
-
----
-
-### COLLAB_POST (4:5 — single image, partnership tag)
-
-Same as STATIC_POST but designed for a collab or brand partnership. Shot is crafted to feature the product or brand element prominently enough for the collab tag to feel earned.
-
-**Best for:** affiliate posts, brand gifting, formal partnership announcements.
-
-**Example concepts:**
-- Actor opens branded box, product tissue paper still inside, expression of genuine surprise
-- Actor uses product at a café — product label visible, lifestyle clearly primary
-- Actor and "friend" (second actor) share the product moment
-
----
-
-### CAROUSEL (4:5 — 2 to 10 slides)
-
-Multi-slide post. Each slide is a separate generated image. Best carousels tell a story arc or show multiple angles of the same moment.
-
-**Best for:** "a day with me" content, product education, before/after sequences, location stories.
-
-**Example concepts:**
-- Morning routine: 6 slides — waking up, skincare, coffee, getting dressed, out the door, final look
-- Travel story: 8 slides — airport, hotel room, pool, dinner, night out, packing back up
-- Product deep-dive: 4 slides — lifestyle shot, product close-up, using it, result
-
-**Slide arc structure:**
-```
-Slide 1  — Hook: strongest visual, most scroll-stopping
-Slides 2-N-1 — Body: story beats, product moments, lifestyle context
-Slide N  — Close: CTA, result, or emotional payoff
-```
-
----
-
-### REEL — AMBIENT (9:16, 3-5s loop)
-
-Atmospheric loop. The actor barely moves — environment does. Hair lifts, water shimmers, fabric catches light, shadows shift. Seamless loop feel. No text, no talking.
-
-**Best for:** aesthetic lifestyle, travel, pool, outdoor golden hour, café. High save rate.
-
-**Example concepts:**
-- Pool terrace, late afternoon: actor stands at edge, hair lifts in warm breeze, water shimmers below
-- Café window seat: steam rises from coffee cup, actor's hair moves softly, rain drops on glass behind
-- Hotel balcony: actor looks out at city, fabric of linen shirt moves, golden hour shifts
-
----
-
-### REEL — PORTRAIT (9:16, 3-5s)
-
-Face and upper body. One slow gesture — a smile forming, a gaze drop, a single hair strand falling. Hypnotic. Very high save rate for beauty and lifestyle.
-
-**Best for:** beauty, skincare, hair, any content where the face IS the product.
-
-**Example concepts:**
-- Actor looks slightly down, then raises eyes slowly to camera — faint smile forms
-- Actor tilts head, hair falls to one side, light catches eye color
-- Actor exhales slowly, eyes half-close, then focus returns — post-workout, meditative energy
-
----
-
-### REEL — TEXT REEL (9:16, 5-8s)
-
-Actor is mostly still — text overlay is the main event. Quote, "POV:", product hook, or bold statement. Most viral format in 2026 when the text lands right.
-
-**Best for:** relatable POV content, lifestyle statements, product hook reveals, trend commentary.
-
-**Example concepts:**
-- "POV: you finally booked that villa" — actor sits on sunlit terrace, looks up from book
-- "she stopped explaining herself" — actor walks away from camera, golden hour, confident energy
-- "3 things that changed my skin" — actor holds product, looks at camera, slight nod
-
----
-
-### REEL — POV (9:16, 5-8s)
-
-Direct-to-camera. Actor reacts to an implied viewer. She looks up from something, slows to a stop, holds eye contact, small smile. UGC-native feel.
-
-**Best for:** aspirational lifestyle, "you found her" energy, dating app aesthetic content.
-
-**Example concepts:**
-- Actor reading on couch, looks up as if someone walked in — warm lamp light, relaxed expression
-- Actor in kitchen mid-pour, glances at camera, raises eyebrow slightly, keeps pouring
-- Actor at mirror finishing lipstick, sees camera in reflection, smiles and turns
-
----
-
-### REEL — PRODUCT (9:16, 5-8s)
-
-Product is introduced. Actor picks it up, holds it toward camera, opens it, applies it, or notices it. Product in motion adds energy.
-
-**Best for:** product launches, serum reveals, unboxing, try-on moments, supplement routines.
-
-**Example concepts:**
-- Actor picks up serum bottle, holds it toward camera at chest height, looks at it then up
-- Actor opens branded box — pulls back tissue paper, expression shifts to genuine interest
-- Actor applies product to skin — close-up hand applying, then pulls back to face shot
-
----
-
-## Provider Reference
-
-| Use case | Provider | Cost |
+| Format | What it is | Best for |
 |---|---|---|
-| Single actor, lifestyle/candid | kie.ai Nano Banana Pro | ~$0.12/image |
-| Single actor, complex scene | GPT Image 2 edit | ~$0.07/image (medium) |
-| New actor (no refs) | GPT Image 2 text-to-image | ~$0.07/image (medium) |
-| Multi-actor (2+ in frame) | fal.ai Flux LoRA | ~$0.08/image |
-| Product with readable text/label | Ideogram v2 | ~$0.06/image |
-| Video animation (default) | Kling O3 Pro | ~$0.84/5s |
-| Video + native audio | Seedance 2.0 | ~$1.52/5s |
-
-**Auto-fallback:** C2 generate scripts automatically retry via Nano Banana Pro when GPT Image 2 edit throws a content policy violation. No manual intervention needed — the output file gets a `-nbp.png` suffix to indicate the fallback fired.
-
----
-
-## Content Policy — Quick Reference
-
-**Safe outfits (confirmed to pass with ref images):**
-- Jeans, linen skirt/shorts, denim mini skirt
-- Athletic leggings + zip-up jacket (covered top required)
-- Tennis skirt + sleeveless polo (outdoor)
-- Linen/cotton dresses, oversized shirts
-- One-piece swimsuit — medium shot only (above waist)
-
-**Known blocks with GPT Image 2 edit + ref images:**
-- Bikini / two-piece swimsuit — hard block regardless of phrasing
-- Lace/silk/satin sleepwear + bedroom at night
-- Leggings + crop top + indoor gym
-- Swimwear + full body framing
-- **Legs lifted high toward camera + shorts/boyshorts + bed + ref images** — hard block even with safe cotton clothing. Pose is the trigger, not the outfit. Confirmed 2026-04-24.
-- Any intimate clothing context after 3+ images in the same session (cumulative filter)
-
-**Workaround for pool/beach full body:** Use "cream linen pareo wrap tied at the hip over a white fitted crop top" — no swimsuit language, same visual, passes clean.
-
-**Workaround for legs-toward-camera + bed:** Seat actor with legs under or behind duvet, frame as a medium shot from waist up. Legs implied, not shown. All 3 variants pass with this framing.
-
-**Key insight (2026-04-24):** The same scene that blocks in edit mode (with refs) passes cleanly in text-to-image mode (no refs). The content filter in edit mode is triggered by the combination of a real-looking ref + a suggestive pose — not just the pose alone. When you have no refs (new actor), GPT Image 2 text-to-image is significantly more permissive.
+| **Carousel** | 2–10 images, swipeable feed post | Storytelling, fashion sessions, product education |
+| **Static Post** | Single image, feed | Strong hero shot, product reveal, editorial look |
+| **Reel — Ambient** | 3–5s loop, environment moves | Golden hour, pool, café, outdoor lifestyle |
+| **Reel — Portrait** | 3–5s close-up, one slow gesture | Beauty, skincare, magnetic eye contact |
+| **Reel — POV** | 5–8s direct-to-camera | Aspirational lifestyle, "you found her" energy |
+| **Reel — Text Reel** | 5–8s frame + bold text overlay | Viral "POV:" content, quotes, lifestyle statements |
+| **Reel — Product** | 5–8s product interaction | Launches, unboxings, application moments |
+| **Story** | Single vertical image | Stories, try-on moments, intimate lifestyle |
+| **Collab Post** | Single image with brand element | Partnerships, affiliate content, gifting |
 
 ---
 
-## Empirical Knowledge Base
+## Content quality
 
-The skill maintains a living SYSTEM 10 in SKILL.md that records confirmed pass/block patterns per model, with dates and exact trigger combinations. This is updated automatically whenever a real run reveals a non-obvious result.
+Every image is built with a 6-layer prompt system: character identity, scenario, environment, camera profile, realism details, and negative constraints. Each layer is filled automatically — you never see or touch the prompts unless you want to.
 
-**Current entries cover:**
-- GPT Image 2 edit: 7 confirmed block patterns, 5 confirmed pass patterns, workarounds
-- GPT Image 2 text-to-image: key insight on ref-gated filtering (same pose blocks with refs, passes without)
-- Nano Banana Pro: content policy behavior, prompt length sensitivity, fallback PROMPT_SHORT template
+The skill also injects 10 realism anchors into every image: skin pores, stray hairs, natural under-eye texture, fabric drape, light imperfections, lens aberrations, jewelry following gravity. The goal is images that look like they were shot on a phone by a real person.
 
-When adding to the knowledge base: only document surprises. Expected results are not worth recording — the value is in the edge cases.
+---
+
+## Content policy
+
+The skill knows which scene and outfit combinations will get blocked by each AI provider before it spends anything. It routes around known blocks automatically and logs what it changed.
+
+If something does get blocked mid-generation, it retries with a safe alternative automatically — no wasted spend, no manual intervention needed.
+
+---
+
+## What it costs to use
+
+These are AI generation costs paid directly to the providers. The skill itself is free.
+
+| Content type | Approximate cost |
+|---|---|
+| 1 carousel slide (image) | $0.07 – $0.15 |
+| Full 6-slide carousel | $0.40 – $0.70 |
+| 1 Reel (frame + 5s video) | $0.90 – $1.00 |
+| 1 month of daily content (24 posts) | $15 – $25 |
+
+You set your budget in `workspace.json` and the skill stays within it when choosing which model to use.
+
+---
+
+## The autonomous daily agent
+
+Once set up, a script runs every morning on your Mac at the time you chose. It reads your content calendar, calls Claude via the Anthropic API, gets back a full generation plan, executes it, crops everything to the right format, and sends you a push notification.
+
+It runs whether Claude Code is open or not. Your Mac just needs to be on.
+
+---
+
+## Getting started
+
+1. Install [Claude Code](https://claude.ai/code)
+2. Download this skill into your Claude skills folder (`~/.claude/skills/ugcfullcreation/`)
+3. Open Claude Code in your project folder
+4. Type `/ugcfullcreation` — the setup wizard starts automatically
+5. Follow the 7 setup questions
+6. Add reference photos for your actors and start creating
+
+---
+
+## FAQ
+
+**Do I need to write prompts?**
+No. You describe the concept in plain language and the skill handles everything.
+
+**How consistent is the face across slides?**
+Very consistent. With 1 reference photo the face holds well across 5–6 slides. With more photos it holds even tighter.
+
+**Can I use my own actors?**
+Yes. Any person with at least one clear face photo can become an actor. The skill extracts the identity card from the photo automatically.
+
+**What AI models does it use?**
+It routes automatically based on your budget and the content type — GPT Image 2, Nano Banana Pro, Flux LoRA, or Ideogram v2 for images; Kling O3 or Seedance 2.0 for video. You don't need to know which model to pick.
+
+**Can I run multiple Instagram accounts?**
+Yes. `workspace.json` supports multiple accounts. The daily agent can be configured per account.
+
+**Does it publish automatically?**
+It prepares everything for publishing. By default you approve first, then run one command. Full auto-publish without approval is possible but off by default.
+
+**Does it work if my computer is sleeping?**
+No — the Mac needs to be on for the scheduled generation to run. It works fine with the lid closed as long as it's plugged in.
