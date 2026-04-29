@@ -15,18 +15,37 @@ import traceback
 from datetime import date as _date
 from pathlib import Path
 
-# ── Paths ─────────────────────────────────────────────────────────────────────
-BASE          = Path("/Users/asociaciondame/ugcpanorama")
-SKILL_PATH    = Path("/Users/asociaciondame/.claude/skills/ugcfullcreation/SKILL.md")
-CALENDAR_PATH = BASE / "las3x1_calendar.json"
-ENV_PATH      = BASE / ".env"
-LOG_PATH      = BASE / "daily_agent.log"
+# ── Locate workspace.json ─────────────────────────────────────────────────────
+SKILL_PATH = Path("/Users/asociaciondame/.claude/skills/ugcfullcreation/SKILL.md")
+
+def find_workspace() -> Path:
+    # 1. explicit arg: python3 daily_agent.py --workspace /path/to/workspace.json
+    for i, arg in enumerate(sys.argv[1:], 1):
+        if arg == "--workspace" and i < len(sys.argv):
+            return Path(sys.argv[i + 1])
+    # 2. workspace.json next to this script
+    local = Path(__file__).parent / "workspace.json"
+    if local.exists():
+        return local
+    # 3. fallback default
+    default = Path("/Users/asociaciondame/ugcpanorama/workspace.json")
+    if default.exists():
+        return default
+    print("ERROR: workspace.json not found. Run /ugcfullcreation setup first.")
+    sys.exit(1)
+
+WORKSPACE_PATH = find_workspace()
+workspace      = json.loads(WORKSPACE_PATH.read_text())
+
+BASE     = Path(workspace["root"])
+ENV_PATH = BASE / workspace.get("env_file", ".env")
+account  = workspace["accounts"][0]   # primary account
 
 # ── Load env ──────────────────────────────────────────────────────────────────
 env = dict(
     line.split("=", 1)
     for line in ENV_PATH.read_text().splitlines()
-    if "=" in line
+    if "=" in line and not line.startswith("#")
 )
 
 ANTHROPIC_API_KEY = env.get("ANTHROPIC_API_KEY", "")
@@ -42,9 +61,14 @@ except ImportError:
     import anthropic
 
 # ── Calendar ──────────────────────────────────────────────────────────────────
-today = sys.argv[1] if len(sys.argv) > 1 else str(_date.today())
-calendar = json.loads(CALENDAR_PATH.read_text())
-entry = next((e for e in calendar["entries"] if e["date"] == today), None)
+today = next(
+    (a for a in sys.argv[1:] if a != "--workspace" and not a.startswith("/")),
+    str(_date.today())
+)
+
+CALENDAR_PATH = BASE / account["calendar_file"]
+calendar      = json.loads(CALENDAR_PATH.read_text())
+entry         = next((e for e in calendar["entries"] if e["date"] == today), None)
 
 if not entry:
     upcoming = [e["date"] for e in calendar["entries"] if e["date"] > today][:5]
@@ -67,13 +91,34 @@ SYSTEM_PROMPT = f"""You are executing Mode D of the ugcfullcreation skill — th
 
 ---
 
-## EXECUTION CONTEXT
+## WORKSPACE (loaded from workspace.json)
 
-You are running HEADLESSLY from a cron job. There is NO user present. Make every decision autonomously:
-- Apply SYSTEM 10 pre-flight checks and auto-fix any known-block patterns
+```json
+{json.dumps(workspace, indent=2)}
+```
+
+Derived paths:
+- ROOT:           {BASE}
+- ACTORS_BASE:    {BASE}/actors/
+- CAMPAIGNS_BASE: {BASE}/campaigns/
+- ENV_FILE:       {ENV_PATH}
+- CALENDAR:       {CALENDAR_PATH}
+- ACCOUNT:        {account.get('instagram_handle')} ({account.get('id')})
+- NICHE:          {account.get('niche')}
+- LANGUAGE:       {account.get('language')}
+- MONETIZATION:   {account.get('monetization')}
+- CAPTION_VOICE:  {account.get('caption_voice')}
+- BUDGET:         ${workspace['budget']['per_image_max_usd']}/img · ${workspace['budget']['per_video_max_usd']}/video · ${workspace['budget']['daily_max_usd']}/day max
+
+---
+
+## EXECUTION RULES
+
+You are running HEADLESSLY from a cron job. NO user present. Make every decision autonomously:
+- Apply SYSTEM 10 pre-flight checks and auto-fix any known-block patterns (log each substitution)
 - Build optimal prompts using SYSTEM 4 (6-layer), SYSTEM 2 (all 10 realism anchors), SYSTEM 3 (camera profile)
-- Route to the correct provider using SYSTEM 8 + SYSTEM 10
-- Execute generation via the Bash tool (write generate.py, run it)
+- Route to the correct provider using SYSTEM 8 + SYSTEM 10 + budget constraints above
+- Execute generation via the Bash tool (write generate.py to output folder, run it)
 - Write publish.py and campaign.json
 - Send push notification via osascript
 
@@ -82,19 +127,18 @@ Use these tools:
 - **read_file**: read any file from disk
 - **write_file**: write content to any file path
 
-Key paths:
-- Campaigns output: /Users/asociaciondame/ugcpanorama/campaigns/
-- Actors: /Users/asociaciondame/ugcpanorama/actors/
-- FAL_KEY env var is already set in the shell — do not hardcode it, read from .env
-- All Python scripts must add these to sys.path at the very top:
-  sys.path.insert(0, "/Users/asociaciondame/ugcpanorama")
+Python generation scripts must start with:
+  import sys
+  sys.path.insert(0, "{BASE}")
   sys.path.insert(0, "/Users/asociaciondame/Library/Python/3.9/lib/python/site-packages")
-- Use /usr/local/bin/python3 for all generation scripts (fal_client works via sys.path injection above)
 
-IMPORTANT: PIL is broken — use ffmpeg/sips for image operations. Never import PIL.
-IMPORTANT: Always crop CAROUSEL images to 4:5 with ffmpeg after download. Never publish uncropped images.
+Use /usr/local/bin/python3 to run them. Read FAL_KEY from {ENV_PATH} — never hardcode it.
+
+IMPORTANT: PIL is broken on this machine — use ffmpeg/sips for image ops, never import PIL.
+IMPORTANT: Always crop CAROUSEL slides to 4:5 with ffmpeg. Never publish uncropped images.
 IMPORTANT: Always write campaign.json on completion even if some slides failed.
-IMPORTANT: Log every auto-fix (SYSTEM 10 substitution) in your output.
+IMPORTANT: Caption voice for this account: {account.get('caption_voice', 'casual and warm')}
+IMPORTANT: Monetization CTA on CTA-type entries: use DM-based CTA matching the account's model.
 """
 
 # ── User message ──────────────────────────────────────────────────────────────

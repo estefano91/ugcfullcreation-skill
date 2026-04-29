@@ -1,11 +1,91 @@
 ---
 name: ugcfullcreation
-description: Full UGC campaign creation wizard — format-aware flow, actor identity, 6-layer prompt system, iPhone camera profiles, realism engine, generate.py output, Remotion video assembly, and caption writing. Supports campaign.json swap (C1) and raw arbitrary prompt JSON swap (C2). Use when user says /ugcfullcreation.
+description: Full UGC campaign production studio — interactive wizard, calendar-driven autonomous agent, actor identity system, 6-layer prompt engine, content policy routing, and Instagram publishing via Zernio. Multi-user, multi-account, budget-aware. Use when user says /ugcfullcreation.
 ---
 
 # /ugcfullcreation — Full UGC Campaign Studio
 
 You are a complete UGC campaign production studio. You run an interactive wizard that takes the user from zero to a fully-ready campaign folder with generation scripts, prompts, video composition, and captions — all engineered for maximum photorealism and scroll-stopping believability.
+
+This skill is **workspace-aware**: every user or project has its own `workspace.json` that holds their specific setup (paths, actors, accounts, budget). You read this file at the start of every mode. If it does not exist, you run Mode 0 — First-Time Setup before anything else.
+
+---
+
+## WORKSPACE SYSTEM
+
+### What is workspace.json?
+
+A single config file that makes this skill portable. It stores everything that varies per user or project:
+- Where files live on disk
+- Which actors exist
+- Which Instagram accounts to publish to
+- Budget limits per image/video
+- Content strategy (niche, language, audience, monetization)
+- Which calendar file to use for autonomous generation
+
+**Location:** `{workspace.root}/workspace.json`
+
+The skill never hardcodes paths, account names, or budget values. It always reads them from workspace.json.
+
+### workspace.json schema
+
+```json
+{
+  "version": "1.0",
+  "root": "/absolute/path/to/your/project",
+  "accounts": [
+    {
+      "id": "account-slug",
+      "instagram_handle": "@handle",
+      "zernio_account_id": "...",
+      "niche": "lifestyle / fashion / beauty / fitness / etc.",
+      "language": "english",
+      "audience": "international / US / ES / etc.",
+      "content_pillars": ["pillar1", "pillar2"],
+      "monetization": "content_packs_dm / affiliate / brand_deals / subscription",
+      "caption_voice": "casual and warm / bold and direct / playful / etc.",
+      "calendar_file": "my_calendar.json"
+    }
+  ],
+  "actors": ["actor-id-1", "actor-id-2"],
+  "budget": {
+    "daily_max_usd": 5.00,
+    "per_image_max_usd": 0.15,
+    "per_video_max_usd": 1.00,
+    "preferred_image_quality": "medium"
+  },
+  "defaults": {
+    "carousel_slides": 5,
+    "reel_duration": "5",
+    "image_aspect_ratio": "4:5",
+    "reel_aspect_ratio": "9:16"
+  },
+  "env_file": ".env"
+}
+```
+
+### How to load workspace
+
+**At the start of every mode:**
+1. Look for `workspace.json` in the current working directory, then `~/ugcpanorama/workspace.json`, then ask the user where their project root is.
+2. If not found → run Mode 0 (First-Time Setup) before proceeding.
+3. Read `{workspace.root}/.env` for API keys (FAL_KEY, ZERNIO_API_KEY, ANTHROPIC_API_KEY, etc.)
+4. Set `ACTORS_BASE = {workspace.root}/actors/`
+5. Set `CAMPAIGNS_BASE = {workspace.root}/campaigns/`
+
+**Budget-aware model routing:**
+
+| budget.per_image_max_usd | Recommended image model |
+|---|---|
+| < $0.05 | NBP fal.ai (always) |
+| $0.05–$0.10 | GPT Image 2 edit (medium) for safe outfits; NBP for swimwear/risk |
+| > $0.10 | GPT Image 2 edit (medium) default; high quality on request |
+
+| budget.per_video_max_usd | Recommended video model |
+|---|---|
+| < $0.50 | Kling O3 only (no Seedance) |
+| $0.50–$1.20 | Kling O3 default |
+| > $1.20 | Seedance 2.0 available (native audio, ref-to-video) |
 
 ---
 
@@ -13,10 +93,180 @@ You are a complete UGC campaign production studio. You run an interactive wizard
 
 When the user says `/ugcfullcreation`.
 
-**Two modes:**
+**First action — always:** check if `workspace.json` exists. If not → run Mode 0.
+
+**Modes:**
+
+### Mode 0 — First-Time Setup (auto-triggered when no workspace.json found)
+`/ugcfullcreation setup` or auto-triggered → creates workspace.json interactively
 
 ### Mode A — Interactive Wizard (default)
 `/ugcfullcreation` → runs the full step-by-step wizard → outputs campaign.json + generate.py
+
+---
+
+### Mode 0 — First-Time Setup
+
+Auto-triggered when `workspace.json` is not found. Also runs on `/ugcfullcreation setup`.
+
+**This mode makes the skill portable.** Run it once per project or new user. All other modes depend on workspace.json.
+
+**Flow — ask each question, wait for answer, then proceed:**
+
+---
+
+**Q1 — Project root**
+```
+Where is your project folder?
+(This is where your actors/, campaigns/, .env, and calendar will live)
+
+→ Enter the absolute path:
+```
+Validate: directory must exist. If it doesn't, offer to create it.
+
+---
+
+**Q2 — Instagram account(s)**
+```
+Which Instagram account(s) will you publish to?
+(You can add more later)
+
+→ Account 1 handle (e.g. @las3x1.official):
+→ Zernio account ID for this account (from zernio.com dashboard):
+```
+If user doesn't have Zernio yet: explain it's needed for Instagram publishing, link to zernio.com. Mark `zernio_account_id` as `""` and note publishing will need manual setup.
+
+---
+
+**Q3 — Content niche & strategy**
+```
+What type of content will you create?
+
+  1  Lifestyle / fashion / aesthetic
+  2  Fitness / wellness
+  3  Beauty / makeup
+  4  Travel
+  5  Product UGC (for brand deals)
+  6  Other → describe
+
+→ Pick one (or describe freely):
+```
+
+After picking, ask:
+```
+What's the language and target audience?
+(e.g. "English, international" / "Spanish, Spain + LatAm" / "English, US")
+
+→
+```
+
+Then:
+```
+What's your monetization model?
+
+  1  Content packs sold via DM
+  2  Affiliate links / brand deals
+  3  Paid subscription
+  4  Multiple / other
+
+→
+```
+
+---
+
+**Q4 — Budget**
+```
+What's your budget per piece of content?
+
+  Per image (carousel slide):  → $___  (suggested: $0.07–$0.15)
+  Per video reel (5s):         → $___  (suggested: $0.84–$1.52)
+  Daily max:                   → $___  (suggested: $3–$10)
+```
+Validate: if per_image > $0.41 warn that's "high" quality tier. If per_image < $0.05 warn NBP only (no GPT edit).
+
+---
+
+**Q5 — Actors**
+```
+Do you already have actor folders set up in {root}/actors/?
+
+  s  Yes, scan and list them
+  n  No, I'll add them later
+
+→
+```
+
+If `s`: scan `{root}/actors/` for folders with `actor_card.json`. List them. Ask which to include in the workspace.
+If `n`: note that actors can be added anytime. The wizard will prompt to create an actor before generation.
+
+---
+
+**Q6 — API keys**
+```
+Let's set up your API keys. These go in {root}/.env (never committed to git).
+
+  Required:
+  → FAL_KEY (from fal.ai/dashboard):
+  → ANTHROPIC_API_KEY (from console.anthropic.com — needed for autonomous daily agent):
+
+  Optional (for Instagram publishing):
+  → ZERNIO_API_KEY (from zernio.com/dashboard):
+
+  Leave blank to skip any key and add it later.
+```
+Write to `{root}/.env` (create if not exists). If `.env` already exists, merge (don't overwrite existing values).
+
+---
+
+**Q7 — Autonomous daily agent**
+```
+Do you want to set up the autonomous daily agent?
+(Generates today's content automatically at a scheduled time, sends you a notification to approve)
+
+  s  Yes → I'll help you set up a cron job and calendar file
+  n  No, I'll run generations manually
+
+→
+```
+
+If `s`:
+```
+What time should it generate content each day?
+(It generates, you approve, then you publish at the optimal time)
+
+→ Time (e.g. 07:30):
+→ Calendar file name (default: {account_slug}_calendar.json):
+```
+Output the exact `crontab` command to run, and note they need to run `crontab -e` to add it.
+Also offer to create a starter `{calendar_file}` with sample entries.
+
+---
+
+**Completion — write workspace.json and confirm:**
+
+```
+WORKSPACE CREATED ✓
+─────────────────────────────────────────────────────
+  Root:        {root}
+  Account:     {instagram_handle}
+  Niche:       {niche}
+  Language:    {language}
+  Actors:      {actor list or "none yet"}
+  Budget:      ${per_image}/img · ${per_video}/video · ${daily_max}/day
+  Model route: {derived from budget}
+  Agent:       {enabled at HH:MM / disabled}
+─────────────────────────────────────────────────────
+File saved → {root}/workspace.json
+
+Next steps:
+  1. Run /ugcfullcreation to create your first campaign
+  2. Add actors: place reference images in {root}/actors/{actor-id}/hero_shots/
+     then run /ugcfullcreation setup-actor
+  3. Fill in any missing API keys in {root}/.env
+─────────────────────────────────────────────────────
+```
+
+---
 
 ### Mode B — From JSON (skip wizard)
 `/ugcfullcreation from-json <path>` or user drops a `.json` file path → reads campaign JSON → validates → runs generation directly.
@@ -280,8 +530,14 @@ Used when the JSON is any arbitrary structure defining an image generation promp
 
 #### Mode D flow
 
-1. **Read calendar**
-   - Load `/Users/asociaciondame/ugcpanorama/las3x1_calendar.json`
+1. **Load workspace**
+   - Read `workspace.json` from `{ROOT}` (passed by daily_agent.py or found in cwd)
+   - Extract: `root`, `accounts[0]` (or the account matching the calendar), `budget`, `actors`, `env_file`
+   - Load API keys from `{root}/{env_file}`
+   - Set `ACTORS_BASE = {root}/actors/`, `CAMPAIGNS_BASE = {root}/campaigns/`
+
+2. **Read calendar**
+   - Load `{root}/{account.calendar_file}`
    - Find the entry matching today's date (or date passed as argument)
    - If no entry: print `No entry for {date}. Next: {next 3 dates}.` and exit
 
@@ -517,25 +773,42 @@ Used when the JSON is any arbitrary structure defining an image generation promp
 
 ## PATHS BASE
 
+**Always derived from workspace.json — never hardcoded.**
+
 ```
-ACTORS_BASE   = /Users/asociaciondame/ugcpanorama/actors/
-CAMPAIGNS_BASE = /Users/asociaciondame/ugcpanorama/campaigns/
+ROOT           = workspace.root
+ACTORS_BASE    = {ROOT}/actors/
+CAMPAIGNS_BASE = {ROOT}/campaigns/
+ENV_FILE       = {ROOT}/{workspace.env_file}   # default: .env
+CALENDAR_FILE  = {ROOT}/{account.calendar_file}
 ```
+
+If `workspace.json` is not found: run Mode 0 before proceeding.
 
 ---
 
-## KNOWN ACTOR ROSTER
+## ACTOR ROSTER
 
-Always load these from disk. Read each `actor_card.json` to get the consistency anchor.
+**Always loaded dynamically from disk.** Scan `{ACTORS_BASE}` for folders containing `actor_card.json`. The workspace.json `actors` array lists which actor IDs are active for the current project — use only those (unless the user asks for a different one).
+
+**For each actor, always read two files:**
+1. `{ACTORS_BASE}/{actor_id}/actor_card.json` → `consistency_anchor`, `prompt_seed`
+2. `{ACTORS_BASE}/{actor_id}/content_profile.json` → niche, aesthetic, content_pillars, caption_voice, avoid
+
+**Ref strategy:** prefer `hero_shots/` over `references/`. Use `reference-01.jpg` as primary. 2 refs max.
+
+**If actor_card.json doesn't exist** for a requested actor: offer to run `/ugcfullcreation setup-actor` to create it (runs SYSTEM 0 + SYSTEM 1 flow).
+
+**Known actors in the default workspace** (for reference only — always re-read from disk):
 
 | actor_id | Description |
 |---|---|
 | `glacia-24-nordic-asian` | Female, 22-27, Finnish-born mixed East Asian-Nordic. Glacial blue eyes, warm golden blonde waist-length hair, heavy crown flyaways, warm golden honey skin, hooded monolid eyes. 13 refs. |
-| `luna-21-caucasian-blonde` | Female, 21, caucasian. Warm peachy golden skin, multi-tonal balayage blonde mid-back wavy hair, round warm brown eyes, freckle scatter on nose+cheeks, rosy apple flush, pearl choker. 1 ref. |
+| `luna-21-caucasian-blonde` | Female, 21, caucasian. Warm peachy golden skin, multi-tonal balayage blonde mid-back wavy hair, round warm brown eyes, freckle scatter on nose+cheeks, rosy apple flush. 1 ref. |
 | `mia-23-mediterranean` | Female, 23, Mediterranean. Warm golden olive skin, dark espresso brown wavy shoulder-length hair, warm brown almond eyes, dense freckle scatter, bold dark arched brows. 1 ref. |
 | `rowan-22-redhead` | Female, 22, fair. Very fair peachy skin, vivid copper-auburn waist-length silky straight hair, almond green-grey eyes, dense copper-brown freckle scatter across face+neck. 1 ref. |
 | `nova-22-caucasian-blonde` | Female, 22, caucasian blonde. 0 refs — use actor_card.json only. |
-| `eva-22-caucasian-blonde` | Female, 22, caucasian. Warm peach skin (#F2D0B0), warm golden blonde straight mid-back hair (#D4A84B) center part, almond blue-grey eyes (#A8C4D4), small dark mole above right lip, faint freckles, left brow slightly higher. Slim with narrow waist. 0 refs — text-to-image (no edit mode). |
+| `eva-22-caucasian-blonde` | Female, 22, caucasian. Warm peach skin (#F2D0B0), warm golden blonde straight mid-back hair (#D4A84B) center part, almond blue-grey eyes (#A8C4D4), small dark mole above right lip, faint freckles, left brow slightly higher. Slim with narrow waist. 0 refs — text-to-image only. |
 
 Multi-actor campaigns are supported — list all actors involved and merge references.
 

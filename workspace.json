@@ -1,0 +1,36 @@
+{
+  "version": "1.0",
+  "root": "/Users/asociaciondame/ugcpanorama",
+  "accounts": [
+    {
+      "id": "las3x1",
+      "instagram_handle": "@las3x1.official",
+      "zernio_account_id": "69c0a52e6cb7b8cf4c8fe704",
+      "niche": "lifestyle / fashion / AI models",
+      "language": "english",
+      "audience": "international",
+      "content_pillars": ["lifestyle", "fashion", "aesthetic", "exclusive_content"],
+      "monetization": "content_packs_dm",
+      "caption_voice": "casual, warm, slightly mysterious — short sentences, emoji accents, CTA at the end",
+      "calendar_file": "las3x1_calendar.json"
+    }
+  ],
+  "actors": [
+    "luna-21-caucasian-blonde",
+    "mia-23-mediterranean",
+    "rowan-22-redhead"
+  ],
+  "budget": {
+    "daily_max_usd": 5.00,
+    "per_image_max_usd": 0.10,
+    "per_video_max_usd": 1.00,
+    "preferred_image_quality": "medium"
+  },
+  "defaults": {
+    "carousel_slides": 5,
+    "reel_duration": "5",
+    "image_aspect_ratio": "4:5",
+    "reel_aspect_ratio": "9:16"
+  },
+  "env_file": ".env"
+}
