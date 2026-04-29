@@ -2130,6 +2130,10 @@ Different content filter stack (not OpenAI's). Generally more permissive for pos
 | 2 refs + short prompt (3-5 sentences) | Best consistency | More refs or longer prompt hurts face lock |
 | 2 refs + full 6-layer prompt | Degraded consistency | Model splits attention between refs and text — face drifts |
 | Poses that block GPT Image 2 edit | Usually PASSES | Different filter stack — test here when GPT blocks |
+| Pool lounger + black bikini + refs (seated, one leg extended + one bent) | BLOCKS | Confirmed 2026-04-29 (Laura, pool-03, 2 attempts). Sunbathing-associated furniture (lounger) + bikini + exposed legs pose = filter trigger. Fix: swap lounger for a neutral surface (poolside bar counter, pool steps, pool edge). Blocks even with simplified neutral pose — the lounger context itself is the risk. |
+| Walking + looking back over shoulder + hair lifting + "confident playful expression" + bikini + refs | BLOCKS | Confirmed 2026-04-29 (Laura, pool-04). Dynamic motion + over-shoulder gaze + hair motion cues combine into a "posed for camera" + "body movement emphasis" pattern. Fix: walking forward + direct camera gaze + arms swinging naturally. Passed immediately. |
+| Crouching at pool edge + elbows on knees + leaning forward toward camera + "playful direct eye contact" + low angle + bikini + refs | BLOCKS | Confirmed 2026-04-29 (Laura, pool-05). Low-angle + leaning toward camera + "playful" gaze = directional body emphasis toward viewer. Same pattern as lying+elbows block. Fix: sitting on pool edge with legs dangling + hands on deck + warm smile. Passed immediately. |
+| Standing at poolside bar counter + elbows on counter + holding drink + black bikini + refs | PASSES | Confirmed 2026-04-29 (Laura, pool-03 fix2). Neutral setting (bar counter), neutral action (holding drink), neutral framing — no sunbathing/reclining association. Good alternative to lounger scene. |
 
 #### PROMPT_SHORT TEMPLATE (for Nano Banana fallback)
 
