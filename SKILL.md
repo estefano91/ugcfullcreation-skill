@@ -270,6 +270,251 @@ Used when the JSON is any arbitrary structure defining an image generation promp
 
 ---
 
+### Mode D — From Calendar (autonomous daily generation)
+
+`/ugcfullcreation from-calendar` or `/ugcfullcreation from-calendar <YYYY-MM-DD>`
+
+**Designed for headless cron execution — zero user interaction. Make every decision autonomously using SYSTEM 8 + SYSTEM 10. Never ask the user anything.**
+
+---
+
+#### Mode D flow
+
+1. **Read calendar**
+   - Load `/Users/asociaciondame/ugcpanorama/las3x1_calendar.json`
+   - Find the entry matching today's date (or date passed as argument)
+   - If no entry: print `No entry for {date}. Next: {next 3 dates}.` and exit
+
+2. **Load actor cards**
+   For each actor in `entry.actors`:
+   - Read `ACTORS_BASE/{actor_id}/actor_card.json` → `consistency_anchor`, `prompt_seed`
+   - Refs: `hero_shots/reference-01.jpg` (primary). Use 1 ref only — 2 refs max if available and actor has >5 hero_shots
+   - Print: `  Actor loaded: {actor_id} — seed {seed}`
+
+3. **SYSTEM 10 pre-flight check**
+   Scan `entry.outfit` + `entry.location` + `entry.poses` against SYSTEM 10 known-block patterns.
+   
+   Apply these automatic substitutions **without asking**:
+   
+   | Detected pattern | Auto-fix |
+   |---|---|
+   | pool lounger + bikini/swimwear | → poolside bar counter, elbows on counter, holding drink |
+   | walking + over-shoulder look + bikini + refs | → walking forward + direct camera gaze + arms swinging |
+   | crouching/leaning forward toward camera + bikini + low angle | → sitting on pool edge, legs dangling, hands on deck |
+   | "lying on" + "propped on elbows" + "teasing smile" + swimwear | → seated upright, relaxed natural smile, medium shot |
+   | "back partially visible" + "thin straps" + any provider | → covered-back outfit (jeans + tank or full dress) |
+   | "legs toward camera" + "low angle" + bed + refs (GPT edit) | → seated with legs under duvet, medium waist-up shot |
+   | any swimwear + GPT edit provider | → override to NBP fal.ai automatically |
+   
+   Log each substitution: `  ⚠ Auto-fix: {original} → {fix} (SYSTEM 10)`
+
+4. **Provider validation**
+   - If `entry.provider == "gpt-image-2-edit"` AND the outfit/scene is swimwear → override to `nbp-fal`
+   - If `entry.provider == "nbp-fal"` AND the outfit is confirmed safe for GPT (jeans, linen, dresses, covered outfits) → keep `nbp-fal` (calendar intent respected)
+   - Log final provider: `  Provider: {provider}`
+
+5. **Build prompts (SYSTEM 4 + SYSTEM 2 + SYSTEM 3)**
+
+   **For CAROUSEL slides (gpt-image-2-edit provider):**
+   Build a 6-layer prompt for each slide using `entry.poses[i]` as the scenario:
+   ```
+   Layer 1 — CHARACTER LOCK (from actor_card consistency_anchor — full anchor)
+   Layer 2 — SCENARIO: {entry.poses[i]}, {micro-expression from context}
+   Layer 3 — ENVIRONMENT: {entry.location}, {time of day inferred from concept}, soft blurred background, one lived-in imperfect detail
+   Layer 4 — CAMERA: rear_cam profile — "shot on iPhone 15 Pro rear main camera, 26mm, f/1.8, Photonic Engine color science, optical image stabilization, true optical bokeh, natural film-like grain"
+   Layer 5 — REALISM: all 10 SYSTEM 2 anchors, concatenated
+   Layer 6 — NEGATIVE: full SYSTEM 4 Layer 6 universal negatives
+   ```
+
+   **For CAROUSEL slides (nbp-fal provider) — PROMPT_SHORT only:**
+   ```
+   The woman in the reference images is {action from entry.poses[i]}, {entry.location}.
+   She is wearing {entry.outfit}.
+   {Camera: "Medium shot chest to head, iPhone 15 Pro rear, candid natural light."} 
+   Natural skin texture, no studio lighting, no retouching.
+   ```
+   Never use full consistency_anchor for NBP. Max 4 sentences. Identity is carried by refs.
+
+   **For REEL frame (always nbp-fal, 9:16):**
+   ```
+   The woman in the reference images is standing {entry.location}.
+   She is wearing {entry.outfit}.
+   Looking directly at camera with a warm genuine smile, {entry.motion first clause}.
+   Full body or three-quarter shot, iPhone 15 Pro rear, 9:16, candid natural light, natural skin texture, fabric drape visible.
+   ```
+
+   **For trio/comparison entries** (`is_trio = len(entry.actors) > 1`):
+   - Each actor gets its own outfit from `entry.outfit_{short}` (e.g. `outfit_luna`, `outfit_mia`, `outfit_rowan`)
+   - Generate 1-2 slides per actor — distribute `entry.slides` evenly
+
+6. **Execute generation via Bash (generate.py pattern)**
+
+   Write a `generate.py` into the output folder, then `python3 generate.py`.
+
+   **CAROUSEL — gpt-image-2-edit:**
+   ```python
+   import sys
+   sys.path.insert(0, "/Users/asociaciondame/ugcpanorama")
+   sys.path.insert(0, "/Users/asociaciondame/Library/Python/3.9/lib/python/site-packages")
+   import os, json, subprocess, requests, fal_client
+
+   env = dict(l.split("=",1) for l in open("/Users/asociaciondame/ugcpanorama/.env").read().splitlines() if "=" in l)
+   os.environ["FAL_KEY"] = env["FAL_KEY"]
+   OUT_DIR = "{out_dir}"
+   
+   SLIDES = [
+       {"name": "slide-01-{short}", "ref": "{ref_path}", "seed": {seed}, "prompt": """{prompt_layer1_to_6}"""},
+       # ... one dict per slide
+   ]
+   
+   for i, slide in enumerate(SLIDES, 1):
+       out_raw  = os.path.join(OUT_DIR, f"{slide['name']}.png")
+       out_crop = os.path.join(OUT_DIR, f"{slide['name']}-crop.png")
+       if os.path.exists(out_crop):
+           print(f"  [{i}/{len(SLIDES)}] already done"); continue
+       print(f"  [{i}/{len(SLIDES)}] {slide['name']}...")
+       ref_url = fal_client.upload_file(slide["ref"])
+       try:
+           result = fal_client.subscribe("openai/gpt-image-2/edit", arguments={
+               "prompt": slide["prompt"], "image_urls": [ref_url],
+               "quality": "medium", "seed": slide["seed"]
+           })
+           img_url = result["images"][0]["url"]
+       except Exception as e:
+           if "content_policy" in str(e).lower():
+               print(f"         ✗ BLOCK — falling back to NBP")
+               result = fal_client.subscribe("fal-ai/nano-banana-pro/edit", arguments={
+                   "prompt": """{prompt_short_nbp_fallback}""",
+                   "image_urls": [ref_url], "aspect_ratio": "4:5", "seed": slide["seed"]
+               })
+               img_url = result["images"][0]["url"]
+           else:
+               print(f"         ✗ ERROR: {str(e)[:100]}"); continue
+       import requests as req
+       with open(out_raw, "wb") as f: f.write(req.get(img_url).content)
+       # Crop to 4:5
+       import subprocess as sp
+       probe = sp.run(["ffprobe","-v","error","-select_streams","v:0","-show_entries",
+                       "stream=width,height","-of","csv=s=x:p=0", out_raw],
+                      capture_output=True, text=True)
+       w, h = map(int, probe.stdout.strip().split("x"))
+       target_h = int(w * 5 / 4)
+       if target_h < h:
+           top = (h - target_h) // 2
+           sp.run(["ffmpeg","-i",out_raw,"-vf",f"crop={w}:{target_h}:0:{top}","-y",out_crop], capture_output=True)
+           os.remove(out_raw)
+       else:
+           os.rename(out_raw, out_crop)
+       print(f"         ✓ {slide['name']}-crop.png  ({os.path.getsize(out_crop)//1024} KB)")
+   print(f"\n  ✓ Done — {OUT_DIR}")
+   ```
+
+   **REEL — NBP frame + Kling O3:**
+   ```python
+   import sys
+   sys.path.insert(0, "/Users/asociaciondame/ugcpanorama")
+   sys.path.insert(0, "/Users/asociaciondame/Library/Python/3.9/lib/python/site-packages")
+   import os, requests, fal_client
+
+   env = dict(l.split("=",1) for l in open("/Users/asociaciondame/ugcpanorama/.env").read().splitlines() if "=" in l)
+   os.environ["FAL_KEY"] = env["FAL_KEY"]
+   OUT_DIR    = "{out_dir}"
+   REF_PATH   = "{ref_path}"
+   SEED       = {seed}
+   FRAME_PATH = os.path.join(OUT_DIR, "{actor_short}-frame.png")
+   VIDEO_PATH = os.path.join(OUT_DIR, "{actor_short}-reel.mp4")
+   
+   PROMPT = """{prompt_short_nbp}"""
+   
+   MOTION = (
+       "{entry.motion — verbatim from calendar, but append: } "
+       "Normal real-time movement — not slow motion. Natural, fluid, candid energy."
+   )
+   
+   # Step 1 — NBP frame
+   if not os.path.exists(FRAME_PATH):
+       print("── Step 1: NBP frame ──")
+       ref_url = fal_client.upload_file(REF_PATH)
+       result = fal_client.subscribe("fal-ai/nano-banana-pro/edit", arguments={
+           "prompt": PROMPT, "image_urls": [ref_url], "aspect_ratio": "9:16", "seed": SEED
+       })
+       with open(FRAME_PATH, "wb") as f: f.write(requests.get(result["images"][0]["url"]).content)
+       print(f"  ✓ frame  ({os.path.getsize(FRAME_PATH)//1024} KB)")
+   
+   # Step 2 — Kling O3
+   if not os.path.exists(VIDEO_PATH):
+       print("── Step 2: Kling O3 ──")
+       frame_url = fal_client.upload_file(FRAME_PATH)
+       result = fal_client.subscribe("fal-ai/kling-video/o3/pro/image-to-video", arguments={
+           "prompt": MOTION,
+           "negative_prompt": "sudden jumps, unnatural movement, morphing face, identity change, flickering, blurry face",
+           "image_url": frame_url, "duration": "5", "aspect_ratio": "9:16"
+       })
+       with open(VIDEO_PATH, "wb") as f: f.write(requests.get(result["video"]["url"]).content)
+       print(f"  ✓ video  ({os.path.getsize(VIDEO_PATH)//1024//1024} MB)")
+   
+   print(f"\n  ✓ Done — {OUT_DIR}")
+   ```
+
+7. **Handle pov_text entries**
+   - Generate frame + video exactly as REEL
+   - Print reminder: `⚠ TEXT OVERLAY: Add "{entry.text_overlay.text}" in {entry.text_overlay.position} style "{entry.text_overlay.style}" in CapCut before publishing`
+   - Include the reminder in publish.py as a top comment
+
+8. **Write publish.py**
+   - Use Zernio payload pattern (see Mode A output)
+   - CAROUSEL → `mediaItems` with each `-crop.png` file uploaded via `fal_client.upload_file`
+   - REEL → `mediaItems` with the `.mp4` file, `shareToFeed: True`
+   - Include `firstComment` with `entry.hashtags`
+   - Include `publishNow: True`
+   - Add header comment: `# Optimal publish time: {entry.publish_time}`
+
+9. **Write campaign.json**
+   Standard format: `version`, `campaign_id`, `account`, `date`, `format`, `type`, `provider`, `actors`, `concept`, `publish_time`, `caption`, `hashtags`, `media_files`
+
+10. **Send push notification**
+    ```bash
+    osascript -e 'display notification "{concept} — {n} files ready. Run publish.py at {publish_time}" with title "las3x1 — aprobar"'
+    ```
+
+11. **Print summary**
+    ```
+    ────────────────────────────────────────────────
+      las3x1 — {camp_id}
+      Format:  {format} / {type}
+      Files:   {list of generated files}
+      Publish: python3 campaigns/{camp_id}/publish.py
+      Time:    {publish_time}
+    ────────────────────────────────────────────────
+    ```
+
+---
+
+#### Mode D — naming conventions
+
+- Campaign ID: `las3x1-{date}-{slug(concept)}`
+- Output folder: `campaigns/las3x1-{date}-{slug}/`
+- CAROUSEL slides: `slide-{NN}-{actor_short}-crop.png`
+- REEL frame: `{actor_short}-frame.png`
+- REEL video: `{actor_short}-reel.mp4`
+- generate.py: saved in output folder
+- publish.py: saved in output folder
+- campaign.json: saved in output folder
+
+---
+
+#### Mode D — cost estimates per entry type
+
+| Entry type | Provider | Approx cost |
+|---|---|---|
+| CAROUSEL 5 slides, 1 actor, gpt-image-2-edit | GPT edit | ~$0.35 |
+| CAROUSEL 6 slides, 1 actor, gpt-image-2-edit | GPT edit | ~$0.42 |
+| CAROUSEL 4 slides, 3 actors (trio), gpt-image-2-edit | GPT edit | ~$0.28 |
+| REEL ambient, 1 actor, nbp + kling | NBP + Kling O3 | ~$1.00 |
+| REEL pov_text, 1 actor, nbp + kling | NBP + Kling O3 | ~$1.00 |
+
+---
+
 ## PATHS BASE
 
 ```
