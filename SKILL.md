@@ -651,7 +651,7 @@ Used when the JSON is any arbitrary structure defining an image generation promp
                print(f"         ✗ ERROR: {str(e)[:100]}"); continue
        import requests as req
        with open(out_raw, "wb") as f: f.write(req.get(img_url).content)
-       # Crop to 4:5
+       # Crop to 4:5 — top-biased (face is upper portion, center crop cuts face)
        import subprocess as sp
        probe = sp.run(["ffprobe","-v","error","-select_streams","v:0","-show_entries",
                        "stream=width,height","-of","csv=s=x:p=0", out_raw],
@@ -659,7 +659,7 @@ Used when the JSON is any arbitrary structure defining an image generation promp
        w, h = map(int, probe.stdout.strip().split("x"))
        target_h = int(w * 5 / 4)
        if target_h < h:
-           top = (h - target_h) // 2
+           top = int((h - target_h) * 0.2)  # 20% from top keeps face in frame
            sp.run(["ffmpeg","-i",out_raw,"-vf",f"crop={w}:{target_h}:0:{top}","-y",out_crop], capture_output=True)
            os.remove(out_raw)
        else:
@@ -2688,8 +2688,10 @@ The crop formula for 576×1184 → 576×720 (4:5):
 ```python
 w, h = 576, 1184
 target_h = int(w * 5 / 4)  # = 720
-top = (h - target_h) // 2  # = 232
-# ffmpeg crop: crop=576:720:0:232
+# ⚠ DO NOT use center crop (top = (h-target_h)//2 = 232) — it cuts the face.
+# Face is in the upper portion of portraits. 20% bias: cut less from top, more from bottom.
+top = int((h - target_h) * 0.2)  # = 93  ← keeps face, removes excess at bottom
+# ffmpeg crop: crop=576:720:0:93
 ```
 
 Use the general ffprobe+ffmpeg pattern (works for any GPT output size):
@@ -2701,7 +2703,7 @@ probe = sp.run(["ffprobe","-v","error","-select_streams","v:0",
 w, h = map(int, probe.stdout.strip().split("x"))
 target_h = int(w * 5 / 4)
 if target_h < h:
-    top = (h - target_h) // 2
+    top = int((h - target_h) * 0.2)  # top-biased crop — face stays in frame
     sp.run(["ffmpeg","-i",out_raw,"-vf",f"crop={w}:{target_h}:0:{top}","-y",out_crop], capture_output=True)
     os.remove(out_raw)
 else:

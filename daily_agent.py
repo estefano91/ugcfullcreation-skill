@@ -135,7 +135,7 @@ Python generation scripts must start with:
 Use /usr/local/bin/python3 to run them. Read FAL_KEY from {ENV_PATH} — never hardcode it.
 
 IMPORTANT: PIL is broken on this machine — use ffmpeg/sips for image ops, never import PIL.
-IMPORTANT: GPT Image 2 edit (fal.ai) outputs at ~576×1184 (~1:2 tall portrait) — NOT 4:5. ALWAYS crop every GPT image to 4:5 with ffmpeg before saving as -crop.png. Instagram feed rejects anything outside 0.75–1.91 ratio and will error on publish. Same rule applies to STATIC_POST and COLLAB_POST — not only CAROUSEL.
+IMPORTANT: GPT Image 2 edit (fal.ai) outputs at ~576×1184 (~1:2 tall portrait) — NOT 4:5. ALWAYS crop every GPT image to 4:5 with ffmpeg before saving as -crop.png. Instagram feed rejects anything outside 0.75–1.91 ratio and will error on publish. Same rule applies to STATIC_POST and COLLAB_POST — not only CAROUSEL. CROP BIAS: use top = int((h - target_h) * 0.2) not // 2 — face is in the upper portion of portraits, center crop cuts it off. 20% from top keeps the face, cuts excess from bottom.
 IMPORTANT: NBP fal.ai respects the aspect_ratio parameter — pass "4:5" and output is already correct. No crop needed.
 IMPORTANT: Always write campaign.json on completion even if some slides failed.
 IMPORTANT: Always write campaign.json on completion even if some slides failed.
