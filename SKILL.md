@@ -623,6 +623,9 @@ Used when the JSON is any arbitrary structure defining an image generation promp
        # ... one dict per slide
    ]
    
+   # ⚠ GPT Image 2 edit outputs ~576×1184 (~1:2), NOT 4:5.
+   # The crop block below is MANDATORY — Instagram rejects uncropped GPT images.
+   # NBP output already respects aspect_ratio="4:5" and does NOT need cropping.
    for i, slide in enumerate(SLIDES, 1):
        out_raw  = os.path.join(OUT_DIR, f"{slide['name']}.png")
        out_crop = os.path.join(OUT_DIR, f"{slide['name']}-crop.png")
@@ -2667,6 +2670,47 @@ Example (Eva, pruebajson scene):
 She is lying on a bed with both legs lifted playfully toward the ceiling, holding a smartphone toward camera, wearing an oversized white cotton tee.
 Very low bed-level wide-angle perspective, harsh on-camera smartphone flash, candid bedroom energy."
 ```
+
+---
+
+---
+
+### OUTPUT FORMAT — GPT Image 2 edit (`openai/gpt-image-2/edit` via fal.ai)
+
+**⚠ CRITICAL — Instagram publish will fail if you skip this step.**
+
+GPT Image 2 edit (fal.ai) does NOT output 4:5. It outputs ~576×1184 (~1:2 tall portrait). Instagram feed requires 0.75–1.91 ratio. Submitting an uncropped GPT image to Zernio returns:
+> `Instagram Image 1: Aspect ratio 0.49:1 is outside Instagram's allowed range (0.75 to 1.91).`
+
+**Rule: EVERY image from GPT Image 2 edit must be cropped to 4:5 with ffmpeg before publish — regardless of format (CAROUSEL, STATIC_POST, COLLAB_POST).**
+
+The crop formula for 576×1184 → 576×720 (4:5):
+```python
+w, h = 576, 1184
+target_h = int(w * 5 / 4)  # = 720
+top = (h - target_h) // 2  # = 232
+# ffmpeg crop: crop=576:720:0:232
+```
+
+Use the general ffprobe+ffmpeg pattern (works for any GPT output size):
+```python
+import subprocess as sp
+probe = sp.run(["ffprobe","-v","error","-select_streams","v:0",
+                "-show_entries","stream=width,height","-of","csv=s=x:p=0", out_raw],
+               capture_output=True, text=True)
+w, h = map(int, probe.stdout.strip().split("x"))
+target_h = int(w * 5 / 4)
+if target_h < h:
+    top = (h - target_h) // 2
+    sp.run(["ffmpeg","-i",out_raw,"-vf",f"crop={w}:{target_h}:0:{top}","-y",out_crop], capture_output=True)
+    os.remove(out_raw)
+else:
+    os.rename(out_raw, out_crop)
+```
+
+**NBP (`fal-ai/nano-banana-pro/edit`) is NOT affected** — it respects `aspect_ratio: "4:5"` and outputs correctly sized images. No crop needed for NBP output.
+
+Confirmed: 2026-04-30 (Luna intro carousel, 6 slides, all 576×1184 — first publish attempt rejected by Instagram, fixed by center-crop to 576×720).
 
 ---
 

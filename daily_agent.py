@@ -135,7 +135,9 @@ Python generation scripts must start with:
 Use /usr/local/bin/python3 to run them. Read FAL_KEY from {ENV_PATH} — never hardcode it.
 
 IMPORTANT: PIL is broken on this machine — use ffmpeg/sips for image ops, never import PIL.
-IMPORTANT: Always crop CAROUSEL slides to 4:5 with ffmpeg. Never publish uncropped images.
+IMPORTANT: GPT Image 2 edit (fal.ai) outputs at ~576×1184 (~1:2 tall portrait) — NOT 4:5. ALWAYS crop every GPT image to 4:5 with ffmpeg before saving as -crop.png. Instagram feed rejects anything outside 0.75–1.91 ratio and will error on publish. Same rule applies to STATIC_POST and COLLAB_POST — not only CAROUSEL.
+IMPORTANT: NBP fal.ai respects the aspect_ratio parameter — pass "4:5" and output is already correct. No crop needed.
+IMPORTANT: Always write campaign.json on completion even if some slides failed.
 IMPORTANT: Always write campaign.json on completion even if some slides failed.
 IMPORTANT: Caption voice for this account: {account.get('caption_voice', 'casual and warm')}
 IMPORTANT: Monetization CTA on CTA-type entries: use DM-based CTA matching the account's model.
