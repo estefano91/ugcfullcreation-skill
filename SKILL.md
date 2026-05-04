@@ -733,13 +733,13 @@ Used when the JSON is any arbitrary structure defining an image generation promp
 
 10. **Send push notification**
     ```bash
-    osascript -e 'display notification "{concept} — {n} files ready. Run publish.py at {publish_time}" with title "las3x1 — aprobar"'
+    osascript -e 'display notification "{concept} — {n} files ready. Run publish.py at {publish_time}" with title "{account.id} — aprobar"'
     ```
 
 11. **Print summary**
     ```
     ────────────────────────────────────────────────
-      las3x1 — {camp_id}
+      {account.id} — {camp_id}
       Format:  {format} / {type}
       Files:   {list of generated files}
       Publish: python3 campaigns/{camp_id}/publish.py
@@ -771,6 +771,200 @@ Used when the JSON is any arbitrary structure defining an image generation promp
 | CAROUSEL 4 slides, 3 actors (trio), gpt-image-2-edit | GPT edit | ~$0.28 |
 | REEL ambient, 1 actor, nbp + kling | NBP + Kling O3 | ~$1.00 |
 | REEL pov_text, 1 actor, nbp + kling | NBP + Kling O3 | ~$1.00 |
+
+---
+
+### Mode R — Reference Photo Injection (real-photo actors)
+
+`/ugcfullcreation from-refs <actor_id> [<json_path>]`
+
+**Use this mode when the actor's identity comes from REAL reference photos, not from a trained AI identity.** Unlike Mode C (which rebuilds the prompt from `consistency_anchor` text), Mode R uses the photos themselves as the identity carrier — so the prompt stays short and the face comes from the images.
+
+**Triggered by:**
+- `/ugcfullcreation from-refs`
+- User says "usa las refs de [actor]", "usa las fotos de referencia de [actor]"
+- User says "aplica este JSON a [actor] con sus fotos"
+- User says "genera con las fotos reales de [actor]"
+
+---
+
+#### Mode R flow
+
+1. **Load reference photos**
+   - Look in `ACTORS_BASE/{actor_id}/references/` first, fallback to `hero_shots/`
+   - List all image files in the folder
+   - Pick the 2 best refs: prefer full-face, frontal or 3/4 angle, good light. Avoid extreme angles or very dark shots.
+   - Print:
+     ```
+     ✓ {N} referencias encontradas — usando las 2 mejores:
+       ref 1: {filename}
+       ref 2: {filename}
+     ```
+
+2. **Read actor_card.json**
+   - Load `ACTORS_BASE/{actor_id}/actor_card.json`
+   - Extract: `consistency_anchor`, `prompt_seed`, `ref_strategy`, `negative_identity`
+   - If `actor_card.json` does not exist → offer to analyze the reference photos and create one first:
+     ```
+     ⚠ No hay actor_card.json para {actor_id}.
+     ¿Quieres que analice las fotos de referencia y cree el actor_card ahora?  s/n
+     ```
+     On `s`: analyze photos visually (face shape, eyes, hair, skin, distinguishing features) → write `actor_card.json` → proceed.
+
+3. **Load the source JSON**
+   - If a path was passed as argument → read it.
+   - If not → ask:
+     ```
+     ¿Qué JSON quieres aplicar?
+     (campaign.json, raw prompt JSON, o ruta a un archivo)
+     → Ruta al JSON:
+     ```
+   - Auto-detect format: `version` + `campaign_id` + `shots` at top level → **campaign format**. Otherwise → **raw prompt JSON**.
+
+4. **Show source JSON summary**
+   ```
+   SOURCE JSON — {filename}  [{campaign / raw prompt}]
+   ─────────────────────────────────────────
+     Escena:    {scene/concept extracted}
+     Outfit:    {outfit extracted}
+     Acción:    {pose/action extracted}
+     Cámara:    {camera style if present}
+     Formato:   {CAROUSEL/REEL/STATIC_POST if present}
+   ─────────────────────────────────────────
+   ```
+
+5. **Content policy check**
+   Scan outfit + scene for known risk combinations (SYSTEM 8). Flag if found:
+   ```
+   ⚠ RIESGO DE CONTENT POLICY
+     {specific risk — e.g., "swimwear + ref images + bedroom"}
+     → Opción: adaptar a {safe alternative}.
+     ¿Ajustamos o generamos tal como está?
+   ```
+   Wait for answer before proceeding.
+
+6. **Show Mode R swap preview**
+   ```
+   MODE R — Reference Photo Injection
+   ─────────────────────────────────────────
+     Actor:       {actor_id}
+     Referencias: {ref1_filename}, {ref2_filename}
+     JSON fuente: {filename}
+     Escena:      {scene}
+     Outfit:      {outfit}
+     Provider:    NBP fal.ai — short prompt, identity from photos
+                  (GPT edit available if outfit is confirmed safe)
+     Output:      campaigns/{actor_short}-ref-{json_slug}_{date}/
+   ─────────────────────────────────────────
+   ```
+
+7. **Cost estimate + confirm**
+   Show total estimated cost. Ask: **"¿Generamos? (~${total})"**
+
+8. **Build prompt — SHORT (identity from photos, not text)**
+
+   **NBP prompt (default for Mode R):**
+   ```
+   The woman in the reference images is {action extracted from JSON}, {location extracted from JSON}.
+   She is wearing {outfit from JSON — adjusted if content policy}.
+   {Camera style from JSON or default: "Medium shot, iPhone 15 Pro rear, natural candid light."}.
+   Natural skin texture, no retouching, no studio lighting.
+   ```
+   Maximum 4 sentences. Never inject consistency_anchor into the main prompt for NBP — photos carry the face.
+
+   **GPT Image 2 edit prompt (if outfit is safe and user prefers):**
+   Build a full 6-layer prompt using the actor's `consistency_anchor` as Layer 1, then scene/outfit/camera/realism layers from the JSON. Same structure as Mode D carousel prompt.
+
+9. **Write and execute generate.py**
+
+   For CAROUSEL (single image or multiple slides from JSON):
+   ```python
+   """
+   Mode R — Reference Photo Injection
+   Actor:  {actor_id}
+   Source: {json_filename}
+   Date:   {YYYY-MM-DD}
+   """
+   import sys
+   sys.path.insert(0, "/Users/asociaciondame/ugcpanorama")
+   sys.path.insert(0, "/Users/asociaciondame/Library/Python/3.9/lib/python/site-packages")
+   import os, requests, fal_client
+
+   env = dict(l.split("=",1) for l in open("/Users/asociaciondame/ugcpanorama/.env").read().splitlines() if "=" in l)
+   os.environ["FAL_KEY"] = env["FAL_KEY"]
+
+   REFS = [
+       "{ref1_absolute_path}",
+       "{ref2_absolute_path}",
+   ]
+
+   OUT_DIR = "/Users/asociaciondame/ugcpanorama/campaigns/{actor_short}-ref-{json_slug}_{date}"
+   os.makedirs(OUT_DIR, exist_ok=True)
+
+   SHOTS = [
+       {"name": "{shot_slug}", "prompt": """{short_4sentence_prompt}""", "aspect_ratio": "4:5"},
+       # ... one dict per slide if carousel
+   ]
+
+   SEED = {actor.prompt_seed}
+
+   print(f"\n── Uploading {len(REFS)} reference photos ──")
+   ref_urls = []
+   for r in REFS:
+       url = fal_client.upload_file(r)
+       ref_urls.append(url)
+       print(f"  ✓ {os.path.basename(r)}")
+
+   for i, shot in enumerate(SHOTS, 1):
+       out_file = os.path.join(OUT_DIR, f"{shot['name']}.png")
+       if os.path.exists(out_file):
+           print(f"  [{i}/{len(SHOTS)}] already done"); continue
+       print(f"  [{i}/{len(SHOTS)}] {shot['name']}...")
+       result = fal_client.subscribe("fal-ai/nano-banana-pro/edit", arguments={
+           "prompt": shot["prompt"],
+           "image_urls": ref_urls,
+           "aspect_ratio": shot["aspect_ratio"],
+           "seed": SEED,
+       })
+       img_url = result["images"][0]["url"]
+       with open(out_file, "wb") as f:
+           f.write(requests.get(img_url).content)
+       print(f"       ✓ {shot['name']}.png  ({os.path.getsize(out_file)//1024} KB)")
+
+   print(f"\n  ✓ Done — {OUT_DIR}")
+   ```
+
+   For REEL: same NBP frame → Kling O3 pipeline as Mode D.
+
+10. **Write campaign.json** to output folder (standard format, actor = `luna-vlc`, refs logged in metadata).
+
+11. **Confirm** by listing generated files:
+    ```
+    ── Mode R complete ──────────────────────────
+      Output: campaigns/{actor_short}-ref-{json_slug}_{date}/
+      Files:  {list}
+    ─────────────────────────────────────────────
+    ```
+
+---
+
+#### Mode R — naming conventions
+
+- Campaign ID: `{actor_short}-ref-{json_slug}_{YYYY-MM-DD}`
+- Output folder: `campaigns/{actor_short}-ref-{json_slug}_{date}/`
+- Slides: `{shot_name}.png` (no `-crop` suffix — NBP respects aspect_ratio)
+- If GPT edit used: `-crop.png` suffix (same crop logic as Mode D)
+- generate.py and campaign.json saved in output folder
+
+#### Mode R — key differences from Mode C
+
+| | Mode C (swap-actor) | Mode R (from-refs) |
+|---|---|---|
+| Identity source | `consistency_anchor` text | Reference photos (files) |
+| Prompt length | Full 6-layer (Layer 1 = anchor) | Short 4 sentences max |
+| Best for | AI-generated actors with established look | Real-person photos being injected into a scene |
+| Provider default | GPT edit (safe) / NBP (swimwear) | NBP always (photos carry face) |
+| Refs | 2 from `hero_shots/` | 2 from `references/` (fallback: `hero_shots/`) |
 
 ---
 

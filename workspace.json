@@ -13,12 +13,27 @@
       "monetization": "content_packs_dm",
       "caption_voice": "casual, warm, slightly mysterious — short sentences, emoji accents, CTA at the end",
       "calendar_file": "las3x1_calendar.json"
+    },
+    {
+      "id": "lunarubia",
+      "instagram_handle": "@lunarubia.vlc",
+      "zernio_account_id": "69c0a52e6cb7b8cf4c8fe704",
+      "niche": "lifestyle / fashion / aesthetic",
+      "language": "english",
+      "audience": "international",
+      "content_pillars": ["lifestyle", "fashion", "aesthetic", "exclusive_content"],
+      "monetization": "content_packs_dm",
+      "caption_voice": "casual, flirty, warm Valencia energy — short sentences, playful emoji, CTA at the end",
+      "calendar_file": "lunarubia_calendar.json",
+      "actors": ["luna-vlc"],
+      "notes": "solo account for luna-vlc — real-photo-based actor, use Mode R for ref-driven generation"
     }
   ],
   "actors": [
     "luna-21-caucasian-blonde",
     "mia-23-mediterranean",
-    "rowan-22-redhead"
+    "rowan-22-redhead",
+    "luna-vlc"
   ],
   "budget": {
     "daily_max_usd": 5.00,
