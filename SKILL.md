@@ -103,6 +103,9 @@ When the user says `/ugcfullcreation`.
 ### Mode A — Interactive Wizard (default)
 `/ugcfullcreation` → runs the full step-by-step wizard → outputs campaign.json + generate.py
 
+### Mode R — Pinterest to Actor (real-photo actors)
+`/ugcfullcreation from-pinterest <actor_id>` → reads `actors/{id}/pinterest/` images visually → extracts scene/style → generates with actor identity from `actors/{id}/references/`
+
 ---
 
 ### Mode 0 — First-Time Setup
@@ -774,116 +777,136 @@ Used when the JSON is any arbitrary structure defining an image generation promp
 
 ---
 
-### Mode R — Reference Photo Injection (real-photo actors)
+### Mode R — Pinterest-to-Actor (replicate style with real-photo actor)
 
-`/ugcfullcreation from-refs <actor_id> [<json_path>]`
+`/ugcfullcreation from-pinterest <actor_id>`
 
-**Use this mode when the actor's identity comes from REAL reference photos, not from a trained AI identity.** Unlike Mode C (which rebuilds the prompt from `consistency_anchor` text), Mode R uses the photos themselves as the identity carrier — so the prompt stays short and the face comes from the images.
+**Use this mode when you have Pinterest inspiration images defining the desired scene/aesthetic, and you want to recreate that look with a real-photo actor.** The `pinterest/` folder provides the creative direction; the actor's `references/` folder provides the identity. The two never mix — photos are separated by role.
+
+```
+actors/{actor_id}/
+  references/   ← actor identity (face, body — used as image_urls for generation)
+  pinterest/    ← creative direction (inspiration photos — read visually to extract scene/style)
+```
 
 **Triggered by:**
-- `/ugcfullcreation from-refs`
-- User says "usa las refs de [actor]", "usa las fotos de referencia de [actor]"
-- User says "aplica este JSON a [actor] con sus fotos"
-- User says "genera con las fotos reales de [actor]"
+- `/ugcfullcreation from-pinterest`
+- User says "usa el pinterest de [actor]"
+- User says "genera con las fotos de pinterest de [actor]"
+- User says "replica este estilo con [actor]"
 
 ---
 
 #### Mode R flow
 
-1. **Load reference photos**
-   - Look in `ACTORS_BASE/{actor_id}/references/` first, fallback to `hero_shots/`
-   - List all image files in the folder
-   - Pick the 2 best refs: prefer full-face, frontal or 3/4 angle, good light. Avoid extreme angles or very dark shots.
+1. **Load actor identity photos**
+   - Read `ACTORS_BASE/{actor_id}/references/` — these are the actor's own face/body photos
+   - Pick the 2 best: prefer full-face frontal or 3/4, good light, avoid extreme angles
+   - These will be used as `image_urls` in the generation call — they carry the face
    - Print:
      ```
-     ✓ {N} referencias encontradas — usando las 2 mejores:
-       ref 1: {filename}
-       ref 2: {filename}
+     ✓ Identidad: 2 fotos de references/
+       id 1: {filename}
+       id 2: {filename}
      ```
 
 2. **Read actor_card.json**
    - Load `ACTORS_BASE/{actor_id}/actor_card.json`
-   - Extract: `consistency_anchor`, `prompt_seed`, `ref_strategy`, `negative_identity`
-   - If `actor_card.json` does not exist → offer to analyze the reference photos and create one first:
+   - Extract: `prompt_seed`, `negative_identity`
+   - If not found → offer to create one by analyzing `references/`:
      ```
      ⚠ No hay actor_card.json para {actor_id}.
-     ¿Quieres que analice las fotos de referencia y cree el actor_card ahora?  s/n
+     ¿Analizo las fotos de references/ y lo creo ahora?  s/n
      ```
-     On `s`: analyze photos visually (face shape, eyes, hair, skin, distinguishing features) → write `actor_card.json` → proceed.
 
-3. **Load the source JSON**
-   - If a path was passed as argument → read it.
-   - If not → ask:
+3. **Read Pinterest folder — visual analysis**
+   - Load all images from `ACTORS_BASE/{actor_id}/pinterest/`
+   - If folder is empty or missing → print:
      ```
-     ¿Qué JSON quieres aplicar?
-     (campaign.json, raw prompt JSON, o ruta a un archivo)
-     → Ruta al JSON:
+     ⚠ No hay fotos en actors/{actor_id}/pinterest/
+     Añade imágenes de inspiración a esa carpeta y vuelve a ejecutar.
      ```
-   - Auto-detect format: `version` + `campaign_id` + `shots` at top level → **campaign format**. Otherwise → **raw prompt JSON**.
+     Stop.
+   - **Analyze each Pinterest image visually.** For every image extract:
+     - **Escena / location:** interior/exterior, setting type, time of day, light quality
+     - **Outfit:** clothing items, colors, style, coverage level
+     - **Pose / action:** what the subject is doing, body position, camera angle
+     - **Cámara / mood:** shot type (close-up/full body/medium), aesthetic (editorial/candid/warm/cool)
+     - **Distinctive elements:** props, furniture, background details that define the vibe
+   - If multiple Pinterest images → extract a unified brief (the common aesthetic across all of them)
+   - Print extracted brief:
+     ```
+     BRIEF EXTRAÍDO DE PINTEREST ({N} imágenes)
+     ─────────────────────────────────────────
+       Escena:   {location/setting extracted}
+       Outfit:   {clothing extracted}
+       Pose:     {action/pose extracted}
+       Cámara:   {shot type + mood}
+       Vibe:     {2-word aesthetic summary, e.g. "clean editorial" / "warm candid"}
+     ─────────────────────────────────────────
+     ```
 
-4. **Show source JSON summary**
-   ```
-   SOURCE JSON — {filename}  [{campaign / raw prompt}]
-   ─────────────────────────────────────────
-     Escena:    {scene/concept extracted}
-     Outfit:    {outfit extracted}
-     Acción:    {pose/action extracted}
-     Cámara:    {camera style if present}
-     Formato:   {CAROUSEL/REEL/STATIC_POST if present}
-   ─────────────────────────────────────────
-   ```
-
-5. **Content policy check**
-   Scan outfit + scene for known risk combinations (SYSTEM 8). Flag if found:
+4. **Content policy check**
+   Scan extracted outfit + scene for known risk combinations (SYSTEM 8). Flag if found:
    ```
    ⚠ RIESGO DE CONTENT POLICY
-     {specific risk — e.g., "swimwear + ref images + bedroom"}
-     → Opción: adaptar a {safe alternative}.
+     {specific risk detected}
+     → Opción: adaptar outfit a {safe alternative}.
      ¿Ajustamos o generamos tal como está?
    ```
-   Wait for answer before proceeding.
+   Wait for answer.
 
-6. **Show Mode R swap preview**
+5. **Ask format and slide count**
    ```
-   MODE R — Reference Photo Injection
+   ¿Qué formato quieres generar?
+     1  STATIC_POST (1 imagen)
+     2  CAROUSEL (N slides — ¿cuántas?)
+     3  REEL
+
+   →
+   ```
+
+6. **Show generation preview**
+   ```
+   MODE R — Pinterest → {actor_id}
    ─────────────────────────────────────────
-     Actor:       {actor_id}
-     Referencias: {ref1_filename}, {ref2_filename}
-     JSON fuente: {filename}
-     Escena:      {scene}
-     Outfit:      {outfit}
-     Provider:    NBP fal.ai — short prompt, identity from photos
-                  (GPT edit available if outfit is confirmed safe)
-     Output:      campaigns/{actor_short}-ref-{json_slug}_{date}/
+     Identidad:   references/ ({id1}, {id2})
+     Inspiración: pinterest/ ({N} imágenes)
+     Escena:      {extracted scene}
+     Outfit:      {extracted outfit}
+     Formato:     {format} / {N slides if carousel}
+     Provider:    NBP fal.ai (prompt corto — identidad en fotos)
+     Output:      campaigns/{actor_short}-pinterest-{slug}_{date}/
    ─────────────────────────────────────────
    ```
 
 7. **Cost estimate + confirm**
-   Show total estimated cost. Ask: **"¿Generamos? (~${total})"**
+   Ask: **"¿Generamos? (~${total})"**
 
-8. **Build prompt — SHORT (identity from photos, not text)**
+8. **Build prompt — SHORT (4 sentences max — identity from photos)**
 
-   **NBP prompt (default for Mode R):**
+   **NBP prompt template:**
    ```
-   The woman in the reference images is {action extracted from JSON}, {location extracted from JSON}.
-   She is wearing {outfit from JSON — adjusted if content policy}.
-   {Camera style from JSON or default: "Medium shot, iPhone 15 Pro rear, natural candid light."}.
-   Natural skin texture, no retouching, no studio lighting.
+   The woman in the reference images is {pose/action extracted from Pinterest}, {location extracted from Pinterest}.
+   She is wearing {outfit extracted from Pinterest — adjusted if content policy}.
+   {Shot type extracted: "Medium shot chest-up" / "Full body" / "Close-up face"}, iPhone 15 Pro rear camera, natural {light quality extracted} light.
+   Natural skin texture, no studio lighting, no retouching, no filters.
    ```
-   Maximum 4 sentences. Never inject consistency_anchor into the main prompt for NBP — photos carry the face.
+   - Maximum 4 sentences
+   - Never inject `consistency_anchor` text for NBP — photos carry the face
+   - Preserve the distinctive vibe elements from Pinterest (props, background detail, color palette) as a short addition if space allows
 
-   **GPT Image 2 edit prompt (if outfit is safe and user prefers):**
-   Build a full 6-layer prompt using the actor's `consistency_anchor` as Layer 1, then scene/outfit/camera/realism layers from the JSON. Same structure as Mode D carousel prompt.
+   **GPT Image 2 edit prompt (only if outfit is confirmed safe — no swimwear, no lace, no sheer):**
+   Use full 6-layer structure: Layer 1 = `consistency_anchor`, layers 2–6 from Pinterest brief + SYSTEM 2 realism anchors.
 
 9. **Write and execute generate.py**
 
-   For CAROUSEL (single image or multiple slides from JSON):
    ```python
    """
-   Mode R — Reference Photo Injection
-   Actor:  {actor_id}
-   Source: {json_filename}
-   Date:   {YYYY-MM-DD}
+   Mode R — Pinterest → {actor_id}
+   Pinterest source: actors/{actor_id}/pinterest/
+   Identity source:  actors/{actor_id}/references/
+   Date: {YYYY-MM-DD}
    """
    import sys
    sys.path.insert(0, "/Users/asociaciondame/ugcpanorama")
@@ -893,22 +916,23 @@ Used when the JSON is any arbitrary structure defining an image generation promp
    env = dict(l.split("=",1) for l in open("/Users/asociaciondame/ugcpanorama/.env").read().splitlines() if "=" in l)
    os.environ["FAL_KEY"] = env["FAL_KEY"]
 
+   # Identity photos (face carrier — from references/)
    REFS = [
        "{ref1_absolute_path}",
        "{ref2_absolute_path}",
    ]
 
-   OUT_DIR = "/Users/asociaciondame/ugcpanorama/campaigns/{actor_short}-ref-{json_slug}_{date}"
+   OUT_DIR = "/Users/asociaciondame/ugcpanorama/campaigns/{actor_short}-pinterest-{slug}_{date}"
    os.makedirs(OUT_DIR, exist_ok=True)
 
    SHOTS = [
-       {"name": "{shot_slug}", "prompt": """{short_4sentence_prompt}""", "aspect_ratio": "4:5"},
-       # ... one dict per slide if carousel
+       {"name": "{shot_slug}", "prompt": """{short_4sentence_nbp_prompt}""", "aspect_ratio": "4:5"},
+       # one dict per slide for CAROUSEL
    ]
 
    SEED = {actor.prompt_seed}
 
-   print(f"\n── Uploading {len(REFS)} reference photos ──")
+   print(f"\n── Uploading {len(REFS)} identity photos (references/) ──")
    ref_urls = []
    for r in REFS:
        url = fal_client.upload_file(r)
@@ -934,37 +958,47 @@ Used when the JSON is any arbitrary structure defining an image generation promp
    print(f"\n  ✓ Done — {OUT_DIR}")
    ```
 
-   For REEL: same NBP frame → Kling O3 pipeline as Mode D.
+   For REEL: NBP frame with Pinterest-extracted scene → Kling O3 with extracted motion cue.
 
-10. **Write campaign.json** to output folder (standard format, actor = `luna-vlc`, refs logged in metadata).
+10. **Write campaign.json** to output folder. Include a `pinterest_brief` field with the extracted brief for traceability.
 
 11. **Confirm** by listing generated files:
     ```
     ── Mode R complete ──────────────────────────
-      Output: campaigns/{actor_short}-ref-{json_slug}_{date}/
+      Output: campaigns/{actor_short}-pinterest-{slug}_{date}/
       Files:  {list}
+      Brief saved in campaign.json → pinterest_brief
     ─────────────────────────────────────────────
     ```
 
 ---
 
+#### Mode R — folder roles (never confuse these)
+
+| Folder | Role | Used as |
+|---|---|---|
+| `actors/{id}/references/` | Actor identity — their OWN face/body photos | `image_urls` in generation call (NBP/GPT edit) |
+| `actors/{id}/pinterest/` | Creative direction — inspiration images | Read visually to extract scene, outfit, pose, mood → builds the prompt |
+| `actors/{id}/hero_shots/` | AI-generated best outputs — for AI actors | `image_urls` fallback for Mode C |
+
 #### Mode R — naming conventions
 
-- Campaign ID: `{actor_short}-ref-{json_slug}_{YYYY-MM-DD}`
-- Output folder: `campaigns/{actor_short}-ref-{json_slug}_{date}/`
-- Slides: `{shot_name}.png` (no `-crop` suffix — NBP respects aspect_ratio)
-- If GPT edit used: `-crop.png` suffix (same crop logic as Mode D)
+- Campaign ID: `{actor_short}-pinterest-{slug}_{YYYY-MM-DD}`
+- Output folder: `campaigns/{actor_short}-pinterest-{slug}_{date}/`
+- `slug` = 2-3 word summary of the Pinterest vibe (e.g., `beach-editorial`, `morning-minimal`)
+- Slides: `{shot_name}.png`
+- If GPT edit used: `-crop.png` suffix
 - generate.py and campaign.json saved in output folder
 
-#### Mode R — key differences from Mode C
+#### Mode R — key differences from other modes
 
-| | Mode C (swap-actor) | Mode R (from-refs) |
-|---|---|---|
-| Identity source | `consistency_anchor` text | Reference photos (files) |
-| Prompt length | Full 6-layer (Layer 1 = anchor) | Short 4 sentences max |
-| Best for | AI-generated actors with established look | Real-person photos being injected into a scene |
-| Provider default | GPT edit (safe) / NBP (swimwear) | NBP always (photos carry face) |
-| Refs | 2 from `hero_shots/` | 2 from `references/` (fallback: `hero_shots/`) |
+| | Mode C (swap-actor) | Mode B/C2 (from-json) | Mode R (from-pinterest) |
+|---|---|---|---|
+| Identity source | `consistency_anchor` text | `consistency_anchor` text | `references/` photos |
+| Creative brief source | Existing campaign JSON | Raw prompt JSON | Pinterest images (visual) |
+| Prompt length | Full 6-layer | Full or short | Short 4 sentences (NBP) |
+| Best for | AI-generated actors | Any actor + existing JSON | Real-photo actors + visual inspiration |
+| Provider default | GPT edit or NBP | GPT edit or NBP | NBP always |
 
 ---
 
