@@ -819,7 +819,7 @@ actors/{actor_id}/
      ¿Analizo las fotos de references/ y lo creo ahora?  s/n
      ```
 
-3. **Read Pinterest folder — visual analysis**
+3. **Read Pinterest folder — visual analysis + complete JSON per image**
    - Load all images from `ACTORS_BASE/{actor_id}/pinterest/`
    - If folder is empty or missing → print:
      ```
@@ -827,24 +827,44 @@ actors/{actor_id}/
      Añade imágenes de inspiración a esa carpeta y vuelve a ejecutar.
      ```
      Stop.
-   - **Analyze each Pinterest image visually.** For every image extract:
-     - **Escena / location:** interior/exterior, setting type, time of day, light quality
-     - **Outfit:** clothing items, colors, style, coverage level
-     - **Pose / action:** what the subject is doing, body position, camera angle
-     - **Cámara / mood:** shot type (close-up/full body/medium), aesthetic (editorial/candid/warm/cool)
-     - **Distinctive elements:** props, furniture, background details that define the vibe
-   - If multiple Pinterest images → extract a unified brief (the common aesthetic across all of them)
-   - Print extracted brief:
+   - **MANDATORY: Generate a complete JSON for EVERY Pinterest image before anything else.**
+     This is non-negotiable — always do this, even if the user doesn't ask. The JSON is the source of truth for prompt generation. Use this schema for every image:
+     ```json
+     {
+       "scene": "brief scene label",
+       "location_details": "specific setting, architectural details, background elements",
+       "pose": "exact body position, what hands are doing, direction of gaze, angle",
+       "expression": "facial expression, energy, mood conveyed",
+       "outfit": {
+         "top": "garment type, color, cut, fabric details",
+         "bottom": "garment type, color, cut",
+         "shoes": "style, color, brand if visible",
+         "jacket_or_outer": "if present",
+         "accessories": "jewelry, sunglasses, bags — specific descriptions"
+       },
+       "props": ["list every prop with specific details — brand, color, type"],
+       "bag": "bag type, color, brand if identifiable",
+       "nails": "color, length, shape",
+       "hair": "color, length, texture, style (up/down/wavy/straight)",
+       "lighting": "quality, direction, source (sun/window/artificial), mood",
+       "camera": "shot type (close/3/4/full body), angle, depth of field, feel (candid/editorial/selfie)",
+       "mood": "2-3 word aesthetic summary"
+     }
+     ```
+   - Output ALL JSONs to the user before proceeding. Label each one by filename.
+   - After all JSONs: extract a **unified brief** (common aesthetic across all images):
      ```
      BRIEF EXTRAÍDO DE PINTEREST ({N} imágenes)
      ─────────────────────────────────────────
-       Escena:   {location/setting extracted}
-       Outfit:   {clothing extracted}
-       Pose:     {action/pose extracted}
-       Cámara:   {shot type + mood}
-       Vibe:     {2-word aesthetic summary, e.g. "clean editorial" / "warm candid"}
+       Concepto: {1-line unified concept}
+       Escena:   {dominant setting}
+       Outfit:   {dominant outfit direction}
+       Pose:     {dominant pose/action type}
+       Cámara:   {dominant shot type + mood}
+       Vibe:     {2-word aesthetic summary}
      ─────────────────────────────────────────
      ```
+   - **Each slide prompt is built directly from its corresponding image's JSON** (not from the unified brief alone). When multiple Pinterest images → each image generates one slide, populated from its own JSON fields.
 
 4. **Content policy check**
    Scan extracted outfit + scene for known risk combinations (SYSTEM 8). Flag if found:
@@ -883,18 +903,22 @@ actors/{actor_id}/
 7. **Cost estimate + confirm**
    Ask: **"¿Generamos? (~${total})"**
 
-8. **Build prompt — SHORT (4 sentences max — identity from photos)**
+8. **Build prompt — from the image's JSON, SHORT (4 sentences max — identity from photos)**
+
+   **Source:** Use each slide's corresponding Pinterest image JSON (step 3) — not the unified brief.
+   Pull `pose`, `location_details`, `outfit`, `props`, `lighting`, `camera` fields directly.
 
    **NBP prompt template:**
    ```
-   The woman in the reference images is {pose/action extracted from Pinterest}, {location extracted from Pinterest}.
-   She is wearing {outfit extracted from Pinterest — adjusted if content policy}.
-   {Shot type extracted: "Medium shot chest-up" / "Full body" / "Close-up face"}, iPhone 15 Pro rear camera, natural {light quality extracted} light.
-   Natural skin texture, no studio lighting, no retouching, no filters.
+   The woman in the reference images is {json.pose}, {json.location_details}.
+   She is wearing {json.outfit.top}, {json.outfit.bottom or jacket}, {json.accessories if notable}.
+   {json.camera shot type}, iPhone 15 Pro rear camera, {json.lighting}.
+   Natural skin texture, no studio lighting, no retouching.
    ```
-   - Maximum 4 sentences
+   - Maximum 4 sentences — concise, scene-driven
+   - Pull props from `json.props` if they define the shot (coffee cup, phone, bag)
    - Never inject `consistency_anchor` text for NBP — photos carry the face
-   - Preserve the distinctive vibe elements from Pinterest (props, background detail, color palette) as a short addition if space allows
+   - Never summarize the unified brief for individual slides — each slide prompt comes from its own JSON
 
    **GPT Image 2 edit prompt (only if outfit is confirmed safe — no swimwear, no lace, no sheer):**
    Use full 6-layer structure: Layer 1 = `consistency_anchor`, layers 2–6 from Pinterest brief + SYSTEM 2 realism anchors.
