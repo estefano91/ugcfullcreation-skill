@@ -126,7 +126,39 @@ Ejemplos de actrices configuradas:
 | **Reel retrato** | Primer plano, belleza, contacto visual directo |
 | **Reel POV** | Contenido viral tipo "POV: you found her" |
 | **Reel con texto** | Overlay con frase, quote, llamada a la acción |
+| **Reel con control de cámara** | Movimiento de cámara preciso: zoom, paneo, tilt, travelling |
 | **Story** | Momento íntimo, prueba de look, lifestyle casual |
+
+---
+
+## Control de cámara en reels
+
+Los reels generados con Kling ahora admiten movimientos de cámara deterministas — no "muévete con naturalidad" sino un zoom, paneo o tilt concreto, igual en cada generación.
+
+Se especifica en el script con un nombre de preset y el sistema lo convierte en parámetros de API:
+
+| Preset | Efecto |
+|---|---|
+| `zoom_in` / `zoom_out` | Acercamiento o alejamiento suave de la actriz |
+| `zoom_in_slow` / `zoom_out_slow` | Versión lenta, ideal para finales de clip |
+| `pan_left` / `pan_right` | La cámara gira horizontalmente |
+| `tilt_up` / `tilt_down` | La cámara se inclina hacia arriba o hacia abajo |
+| `truck_left` / `truck_right` | La cámara se desplaza lateralmente |
+| `pedestal_up` / `pedestal_down` | La cámara sube o baja (crane up / down) |
+| `roll_cw` / `roll_ccw` | Rotación del encuadre (efecto Dutch tilt) |
+
+También acepta valores personalizados si quieres ajustar la velocidad — el rango es de 1 (muy lento) a 10 (máximo).
+
+**Ejemplo de uso:**
+
+> "haz un reel de Luna en la terraza con un zoom lento de entrada"
+
+El sistema genera primero el fotograma estático y luego anima con `zoom_in_slow`. El movimiento de cámara y el movimiento de la actriz son independientes — puedes combinar un zoom lento con una actriz que se ríe o se mueve el pelo.
+
+**Cuándo usar control de cámara vs reel normal:**
+
+- Reel normal → la actriz se mueve, la cámara "flota" de forma natural
+- Control de cámara → necesitas un movimiento de cámara específico y repetible (revelación, push dramático, travelling de producto)
 
 ---
 

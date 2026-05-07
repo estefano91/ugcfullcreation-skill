@@ -2423,6 +2423,110 @@ Motion prompt rules (image-to-video):
 
 ---
 
+### Mode 4 — motion-control (deterministic camera movement)
+
+Use this when you need a **specific, repeatable camera move** — not just "move naturally" but a precise zoom, pan, or tilt. The camera move is controlled via API parameters, not through the prompt.
+
+**Endpoint:** `fal-ai/kling-video/v3/pro/motion-control`
+**Cost:** ~$0.20 / 5s (same as Kling O3 image-to-video)
+
+#### Camera presets (available in `kie_client.CAMERA_PRESETS`)
+
+| Preset name     | Movement type | Value | Effect                         |
+|-----------------|---------------|-------|--------------------------------|
+| `zoom_in`       | zoom          |  +5   | Push in toward subject         |
+| `zoom_out`      | zoom          |  -5   | Pull back / reveal             |
+| `zoom_in_slow`  | zoom          |  +3   | Subtle push-in                 |
+| `zoom_out_slow` | zoom          |  -3   | Subtle pull-back               |
+| `pan_left`      | pan           |  -5   | Camera rotates left            |
+| `pan_right`     | pan           |  +5   | Camera rotates right           |
+| `tilt_up`       | tilt          |  +5   | Camera angles upward           |
+| `tilt_down`     | tilt          |  -5   | Camera angles downward         |
+| `truck_left`    | horizontal    |  -5   | Camera slides left             |
+| `truck_right`   | horizontal    |  +5   | Camera slides right            |
+| `pedestal_up`   | vertical      |  +5   | Camera rises                   |
+| `pedestal_down` | vertical      |  -5   | Camera lowers / crane down     |
+| `roll_cw`       | roll          |  +5   | Clockwise Dutch tilt           |
+| `roll_ccw`      | roll          |  -5   | Counter-clockwise Dutch tilt   |
+
+Speed is controlled by `movement_value` magnitude: 3 = slow, 5 = medium, 8 = fast (max 10).
+
+For a custom move not in the presets, pass a raw dict:
+```python
+{"movement_type": "zoom", "movement_value": 7}  # fast zoom-in
+```
+
+#### When to use motion-control vs plain image-to-video
+
+| Use case | Use |
+|---|---|
+| Actor needs to move naturally (walk, smile, hair sway) | image-to-video (Mode 1) |
+| You need a precise camera move (push-in for drama, crane-up for reveal) | motion-control (Mode 4) |
+| Both actor motion AND camera move | motion-control + describe actor movement in prompt |
+| Cinematic transition / rack focus | motion-control `zoom_in_slow` or `zoom_out_slow` |
+
+#### Code — using `kie_client.generate_video_motion_control()`
+
+```python
+import sys
+sys.path.insert(0, "/Users/asociaciondame/ugcpanorama")
+import os, requests, fal_client
+from kie_client import generate_video_motion_control, CAMERA_PRESETS
+
+env = dict(l.split("=",1) for l in open("/Users/asociaciondame/ugcpanorama/.env").read().splitlines() if "=" in l)
+os.environ["FAL_KEY"] = env["FAL_KEY"]
+
+FRAME_PATH = "{path_to_generated_frame}"
+OUT_PATH   = "{OUT_DIR}/{shot_name}.mp4"
+
+frame_cdn_url = fal_client.upload_file(FRAME_PATH)
+print(f"  ✓ Frame uploaded")
+
+MOTION_PROMPT = (
+    "She shifts her weight gently, a slow warm smile forms. "
+    "Hair moves softly. Background bokeh shimmers. "
+    "Fluid, real-time, candid energy."
+)
+
+result = generate_video_motion_control(
+    image_url    = frame_cdn_url,
+    prompt       = MOTION_PROMPT,
+    camera_motion = "zoom_in_slow",        # preset name OR custom dict
+    duration     = "5",
+    aspect_ratio = "9:16",
+    negative_prompt = "sudden jumps, morphing face, flickering, blurry face",
+)
+
+with open(OUT_PATH, "wb") as f:
+    f.write(requests.get(result["video"]["url"]).content)
+print(f"  ✓ Video saved → {OUT_PATH}")
+```
+
+#### Direct fal.ai call (no kie_client wrapper needed)
+
+```python
+result = fal_client.subscribe("fal-ai/kling-video/v3/pro/motion-control", arguments={
+    "prompt":   MOTION_PROMPT,
+    "image_url": frame_cdn_url,
+    "duration": "5",
+    "aspect_ratio": "9:16",
+    "advanced_camera_control": {
+        "movement_type":  "zoom",   # zoom | pan | tilt | horizontal | vertical | roll
+        "movement_value":  5        # int, -10 to 10 (negative = opposite direction)
+    },
+    "negative_prompt": "sudden jumps, morphing face, flickering, blurry face",
+})
+video_url = result["video"]["url"]
+```
+
+**Prompt rules for motion-control:**
+- Describe **subject motion** in the prompt (what the actor does) — camera move is handled by `advanced_camera_control`
+- Don't describe the camera in the prompt (it conflicts with the control param)
+- Keep prompt short: 2-3 sentences focused on subject action and atmosphere
+- Add negative: `"sudden jumps, morphing face, identity change, flickering, blurry face"`
+
+---
+
 ### Seedance 2.0 via fal.ai (native audio / ref-to-video)
 
 Three modes available:
@@ -2941,6 +3045,9 @@ Different content filter stack (not OpenAI's). Generally more permissive for pos
 | Grey quilted sectional sofa + crop tank top + mini shorts (white/black/cream) + 2x2 collage + editorial poses + 1 ref + safety_tolerance 6 | PASSES — all 3 color variants | Confirmed 2026-05-06 (luna-vlc, pinterest20 v1/v2/v3). Reliable indoor sofa collage formula. Prone poses (lying on back, lying on side, lying on stomach) all pass when "intimate" is absent and "mini shorts" is used instead of "high-cut shorts". |
 | Grey quilted sofa + black/white set + B&W collage + editorial poses + 1 ref + safety_tolerance 6 | PASSES | Confirmed 2026-05-06 (luna-vlc, pinterest18). B&W rendering does not affect policy. Biker shorts and high-cut shorts both pass in this framing. |
 | String bikini (black/white/orange/mocha) + warm golden sand beach + 2x2 collage + overhead + water + sitting + standing poses + 1 ref + safety_tolerance 6 | PASSES — 7 collages | Confirmed 2026-05-06 (luna-vlc, pinterest22). Beach collage with string bikini is reliable at safety_tolerance 6 with 1 ref. Both standing/walking and reclining beach poses pass. |
+| Standing back to camera + over-shoulder gaze + bikini + indoor kitchen + 1 ref + safety_tolerance 6 | BLOCKS | Confirmed 2026-05-07 (luna-vlc, pinterest29 kitchen). Over-shoulder turn + bikini + refs = block on NBP in indoor setting. Same trigger as "walking + over-shoulder + bikini" (Mode D). Fix: stand fully back to camera without turning. |
+| Standing fully back to camera (no over-shoulder turn) + bikini + indoor kitchen + 1 ref + safety_tolerance 6 | PASSES | Confirmed 2026-05-07 (luna-vlc, terracotta bikini kitchen). Back fully to camera with NO over-shoulder gaze passes even in a non-pool indoor setting. The over-shoulder turn is the trigger, not the kitchen/indoor environment. 3-sentence prompt, no character anchor. |
+| Hot pink sports bra + matching leggings + outdoor terrace + yoga mat + tropical plants + multiple poses (prone / seated / standing / kneeling) + 2x2 collage + 1 ref + safety_tolerance 6 | PASSES | Confirmed 2026-05-07 (luna-vlc, pinterest27). Activewear set outdoors passes across all pose types. Same policy path as beach bikini prone: outdoor fitness context = reliable pass. |
 
 #### PROMPT_SHORT TEMPLATE (for Nano Banana fallback)
 
