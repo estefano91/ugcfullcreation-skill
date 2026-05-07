@@ -6,50 +6,113 @@ Sin diseño. Sin fotógrafos. Sin agencias.
 
 ---
 
-## Qué puedes pedirle
+## Cómo funciona
 
-### Crear un carrusel
-
-> "6 fotos para Luna — terraza exterior, atardecer, ropa de lino blanco, mezcla de cuerpo entero y primeros planos"
-
-Resultado: 6 imágenes recortadas al formato correcto + caption + hashtags, listas para publicar.
+Escribes `/ugcfullcreation` en Claude Code y eliges qué quieres hacer. Hay cinco modos, cada uno para una situación distinta.
 
 ---
 
-### Hacer un Reel
+## Modo A — Wizard paso a paso (el más habitual)
 
-> "Mia — terraza exterior, vestido marrón, pelo moviéndose con el viento, energía cálida"
+El modo por defecto. Te hace preguntas una a una: qué actriz, qué formato, qué concepto, qué estilo. Tú contestas en lenguaje normal y al final genera todo.
 
-> "Luna — POV directo a cámara, atardecer dorado, texto: 'POV: you found her'"
+**Cuándo usarlo:** cuando quieres crear algo nuevo desde cero.
 
-> "Rowan — pelo cobrizo con contraluz, muy atmosférico, ritmo lento y soñador"
+**Ejemplo:**
 
-Resultado: un `.mp4` listo para publicar y el frame estático del que salió.
+Escribes `/ugcfullcreation` y el sistema te pregunta:
+- ¿Qué actriz? → Luna
+- ¿Qué formato? → Carrusel de 6 slides
+- ¿Cuál es el concepto? → Terraza de verano, ropa de lino blanco, mezcla de cuerpo entero y primeros planos, luz dorada de tarde
 
----
-
-### Reutilizar un concepto con otra actriz
-
-Tienes una sesión que funcionó con Luna. La quieres igual pero con la cara de Mia.
-
-> "El mismo concepto de la sesión de café de lino, pero con Mia"
-
-Resultado: el mismo escenario, la misma ropa, el mismo estilo de cámara — cara diferente.
+Resultado: 6 imágenes recortadas al formato de Instagram + caption + hashtags, en una carpeta lista para publicar.
 
 ---
 
-### Generar contenido solo, cada día
+## Modo B — Generar desde un archivo JSON
 
-Configuras un calendario una vez. Cada mañana lo genera automáticamente, te manda una notificación y tú decides si publicar.
+Si ya tienes una campaña definida en un JSON (de una sesión anterior o de otra herramienta), lo lanzas directamente sin pasar por el wizard.
+
+**Cuándo usarlo:** cuando ya tienes el plan de la campaña guardado y solo quieres ejecutarlo.
+
+**Ejemplo:**
+
+> "genera este archivo: campaigns/luna-linen-park/campaign.json"
+
+El sistema muestra un resumen de lo que va a generar (actriz, formato, número de imágenes, coste estimado), le dices que sí, y genera.
+
+---
+
+## Modo C — Repetir una campaña con otra actriz
+
+Tomas cualquier campaña ya generada y la vuelves a generar con la cara de otra actriz. El escenario, el outfit, la cámara, todo queda igual. Solo cambia la identidad.
+
+**Cuándo usarlo:** cuando un concepto funciona y quieres el mismo contenido con Mia, Rowan u otra actriz.
+
+**Ejemplo:**
+
+> "usa el mismo JSON de la sesión de lino de Luna pero con Mia"
+
+El sistema detecta la campaña, muestra qué va a cambiar (solo la actriz y sus fotos de referencia), confirmas, y genera las mismas imágenes con la cara de Mia.
+
+También funciona con cualquier JSON de prompt externo — no tiene que ser tuyo:
+
+> "coge este JSON de Pinterest que describe una sesión editorial y aplícalo a Rowan"
+
+---
+
+## Modo D — Calendario automático (genera solo cada día)
+
+Configuras un calendario una vez con lo que quieres publicar cada día. Cada mañana, a la hora que elijas, tu Mac genera ese contenido de forma automática, sin que hagas nada. Te llega una notificación cuando está listo.
+
+**Cuándo usarlo:** cuando ya tienes el contenido planificado y quieres que se genere solo.
 
 **Cómo es un día típico:**
 
-- **07:33** — tu Mac genera el contenido del día en segundo plano
+- **07:33** — tu Mac genera el contenido de hoy en segundo plano
 - **08:00** — notificación en el escritorio: *"6 imágenes listas para el carrusel de Luna. Publicación a las 09:00."*
-- **08:45** — abres la carpeta y revisas las imágenes
+- **08:45** — abres la carpeta y miras las imágenes
 - **09:00** — ejecutas un comando y se publica en Instagram
 
-Tiempo total: menos de 5 minutos al día.
+Tiempo real: menos de 5 minutos al día.
+
+**Ejemplo de entrada en el calendario:**
+
+| Fecha | Actriz | Formato | Concepto |
+|---|---|---|---|
+| 2026-05-10 | Luna | Carrusel 6 slides | Piscina, bikini blanco, luz de mediodía, mezcla poses |
+| 2026-05-11 | Mia | Reel 5s | Terraza restaurante, vestido terracota, pelo al viento |
+| 2026-05-12 | Luna + Mia | Carrusel 5 slides | Tarde de compras, ropa casual, ciudad |
+
+---
+
+## Modo R — Desde imágenes de Pinterest
+
+Guardas imágenes de Pinterest (o de cualquier fuente) en la carpeta de referencias de una actriz. El sistema lee cada imagen visualmente, extrae el escenario y el estilo, y genera esa misma escena con la cara de tu actriz.
+
+**Cuándo usarlo:** cuando encuentras referencias visuales que te gustan y quieres recrearlas con tus actrices.
+
+**Ejemplo:**
+
+Tienes 5 imágenes guardadas de un estilo editorial de café parisino. Escribes:
+
+> "/ugcfullcreation from-pinterest luna"
+
+El sistema analiza cada imagen, describe lo que ve (escenario, outfit, cámara, luz), te muestra el plan antes de generar, confirmas, y genera las 5 escenas con la cara de Luna.
+
+---
+
+## Tus actrices
+
+Cada actriz es una identidad que el sistema mantiene consistente en todas las imágenes. Con una sola foto de referencia la cara se mantiene estable en 5–6 imágenes seguidas. Con más fotos, aún más consistente.
+
+Para añadir una actriz nueva solo necesitas una foto de cara clara. El sistema extrae la identidad solo.
+
+Ejemplos de actrices configuradas:
+
+- **Luna** — 21 años, rubia, piel clara con pecas, ojos marrones. Contenido lifestyle y moda.
+- **Mia** — 23 años, mediterránea, pelo oscuro ondulado, piel dorada. Moda atrevida y belleza.
+- **Rowan** — 22 años, pelirroja, piel muy clara, ojos verde-gris. Editorial y tonos de otoño.
 
 ---
 
@@ -58,20 +121,12 @@ Tiempo total: menos de 5 minutos al día.
 | Formato | Para qué sirve |
 |---|---|
 | **Carrusel** | Sesiones de moda, storytelling, educación de producto |
-| **Post único** | Hero shot, editorial, revelación de producto |
-| **Reel ambiental** | Atardecer, piscina, café, lifestyle en exterior |
-| **Reel retrato** | Primer plano, belleza, contacto visual |
+| **Post único** | Hero shot editorial, revelación de producto |
+| **Reel ambiental** | Piscina, café, exterior con movimiento de ambiente |
+| **Reel retrato** | Primer plano, belleza, contacto visual directo |
 | **Reel POV** | Contenido viral tipo "POV: you found her" |
 | **Reel con texto** | Overlay con frase, quote, llamada a la acción |
 | **Story** | Momento íntimo, prueba de look, lifestyle casual |
-
----
-
-## Tus actrices
-
-Cada actriz es una identidad que el sistema mantiene consistente en todas las imágenes que genera. Con una sola foto de referencia la cara se mantiene estable en 5–6 imágenes. Con más fotos, aún más consistente.
-
-Si quieres añadir una actriz nueva, le das una foto de referencia. Extrae la identidad sola.
 
 ---
 
@@ -83,7 +138,7 @@ Son costes de generación pagados directamente a los proveedores de IA. La skill
 |---|---|
 | 1 imagen (slide de carrusel) | $0.07 – $0.15 |
 | Carrusel completo de 6 imágenes | $0.40 – $0.70 |
-| 1 Reel (imagen + vídeo 5s) | $0.90 – $1.00 |
+| 1 Reel (imagen + vídeo de 5s) | $0.90 – $1.00 |
 | 1 mes de contenido diario (24 posts) | $15 – $25 |
 
 ---
@@ -94,7 +149,7 @@ Son costes de generación pagados directamente a los proveedores de IA. La skill
 2. Descarga la skill en tu carpeta de skills de Claude
 3. Abre Claude Code en tu carpeta de proyecto y escribe `/ugcfullcreation`
 
-La primera vez te hace unas preguntas de configuración (qué cuenta de Instagram, qué tipo de contenido, qué presupuesto). Después de eso, ya no vuelve a preguntarte.
+La primera vez te hace unas preguntas de configuración (qué cuenta de Instagram, qué tipo de contenido, qué presupuesto). Después ya no vuelve a preguntarte.
 
 ---
 
@@ -110,7 +165,7 @@ Sí. Cualquier persona con al menos una foto de cara clara sirve como actriz.
 Sí. Puedes tener tantas cuentas y actrices como quieras, cada una con su propio calendario y configuración.
 
 **¿Publica solo o tengo que aprobar?**
-Por defecto, genera el contenido y espera tu aprobación antes de publicar. También se puede configurar para publicar automáticamente si lo prefieres.
+Por defecto genera el contenido y espera tu aprobación antes de publicar. También se puede configurar para publicar automáticamente.
 
 **¿Funciona si mi Mac está en reposo?**
-No. El Mac tiene que estar encendido para que la generación automática funcione. Con la tapa cerrada y enchufado va bien.
+No. El Mac tiene que estar encendido. Con la tapa cerrada y enchufado va bien.
