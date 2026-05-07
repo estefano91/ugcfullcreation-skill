@@ -2254,6 +2254,8 @@ Step 2 — Kling O3 image-to-video →  animate that frame (~$0.84)
 
 **Always use this 2-step approach for any actor video.** Only use video-to-video/reference mode for non-actor videos (scene transfers, style transfers without a specific character).
 
+**When there is a reference video in `motion_refs/`**, use the 3-step pipeline (see Mode 2 below): extract first frame → generate actor frame → Kling image-to-video. This produces better face consistency than video-to-video/reference.
+
 **2-step script template:**
 
 ```python
@@ -2322,9 +2324,63 @@ result = fal_client.subscribe("fal-ai/kling-video/o3/pro/image-to-video", argume
 video_url = result["video"]["url"]
 ```
 
-#### Mode 2 — video-to-video reference (new video guided by a reference video)
+#### Mode 2 — motion-ref pipeline (reference video → actor frame → animated video)
 
-**Use this when the user provides a reference video** to replicate its motion, camera style, and cinematics with a different character (the actor). The reference video guides HOW the new video looks; the actor's image anchors WHO appears.
+**Use this when there is a reference video in `actors/{id}/motion_refs/`.** The standard 3-step pipeline:
+
+```
+Step 1 — ffmpeg          →  extract first frame from reference video
+Step 2 — NBP fal.ai      →  generate that same scene with the actor's face (~$0.15)
+Step 3 — Kling O3 i2v    →  animate the generated frame (~$0.84)
+Total: ~$0.99
+```
+
+**Why 3 steps instead of video-to-video/reference directly:**
+- Kling video-to-video/reference drifts on face identity — it follows the reference subject's face, not the actor's
+- Generating the first frame with NBP first locks the actor's identity at the pixel level
+- Kling then animates FROM that face-locked frame → identity stays consistent across all frames
+
+**Step 1 — Extract first frame:**
+```python
+import subprocess
+subprocess.run([
+    "ffmpeg", "-i", REF_VIDEO_PATH,
+    "-vframes", "1", "-q:v", "2",
+    FIRST_FRAME_PATH, "-y"
+], check=True)
+```
+Then **visually analyze the first frame** to extract: pose, outfit, background, lighting, shot framing. Use this to write the NBP prompt for Step 2.
+
+**Step 2 — Generate actor frame with NBP (1 ref, SHORT prompt):**
+The prompt describes exactly what is seen in the first frame but with the actor's identity deferred to the reference image:
+```python
+FRAME_PROMPT = (
+    "The woman in the reference images is [pose from first frame], "
+    "wearing [outfit from first frame], [hair style from first frame], "
+    "[expression from first frame]. "
+    "[Background from first frame]. "
+    "[Camera style, lighting from first frame], natural grain, candid."
+)
+result = fal_client.subscribe("fal-ai/nano-banana-pro/edit", arguments={
+    "prompt":           FRAME_PROMPT,
+    "image_urls":       [actor_ref_url],   # 1 ref only — identity from photo
+    "aspect_ratio":     "9:16",
+    "seed":             {actor.prompt_seed},
+    "safety_tolerance": "6",
+})
+```
+
+**Step 3 — Kling O3 image-to-video (from generated frame):**
+Motion prompt describes only movement — appearance is locked in the frame:
+```python
+result_vid = fal_client.subscribe("fal-ai/kling-video/o3/pro/image-to-video", arguments={
+    "prompt":          MOTION_PROMPT,  # movement only — no character description
+    "negative_prompt": "morphing face, identity change, flickering, blurry face, sudden jumps",
+    "image_url":       frame_cdn_url,
+    "duration":        "5",
+    "aspect_ratio":    "9:16",
+})
+```
 
 **Reference video source — always check `motion_refs/` first:**
 
