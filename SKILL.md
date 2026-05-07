@@ -2370,17 +2370,27 @@ result = fal_client.subscribe("fal-ai/nano-banana-pro/edit", arguments={
 })
 ```
 
-**Step 3 — Kling O3 image-to-video (from generated frame):**
-Motion prompt describes only movement — appearance is locked in the frame:
+**Step 3 — Kling O3 video-to-video/reference (generated frame + reference video):**
+Use the generated frame as the identity anchor (`image_urls`) and the reference video to drive the actual movement (`video_url`). This is why we generate the frame first — using a raw actor photo here would drift. The generated frame gives Kling a face that's already locked into the scene.
+
 ```python
-result_vid = fal_client.subscribe("fal-ai/kling-video/o3/pro/image-to-video", arguments={
-    "prompt":          MOTION_PROMPT,  # movement only — no character description
+# @Image1 = generated frame (actor face-locked in the scene)
+# @Video1 = reference video (provides the real movement to follow)
+result_vid = fal_client.subscribe("fal-ai/kling-video/o3/pro/video-to-video/reference", arguments={
+    "prompt": (
+        "@Image1 moves naturally through the scene, following the exact motion, "
+        "body language, and camera movement of @Video1. "
+        "Preserve all facial features and identity from @Image1 in every frame."
+    ),
     "negative_prompt": "morphing face, identity change, flickering, blurry face, sudden jumps",
-    "image_url":       frame_cdn_url,
-    "duration":        "5",
-    "aspect_ratio":    "9:16",
+    "video_url":    video_cdn_url,   # reference video — drives the movement
+    "image_urls":   [frame_cdn_url], # generated frame — drives the identity
+    "duration":     "5",
+    "aspect_ratio": "9:16",
 })
 ```
+
+**Why NOT image-to-video in Step 3:** `image-to-video` with a text motion prompt produces generic movement unrelated to the reference video. `video-to-video/reference` with the reference video as `video_url` replicates the actual movement from that video.
 
 **Reference video source — always check `motion_refs/` first:**
 
