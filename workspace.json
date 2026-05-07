@@ -24,7 +24,7 @@
       "content_pillars": ["lifestyle", "fashion", "aesthetic", "exclusive_content"],
       "monetization": "content_packs_dm",
       "caption_voice": "casual, flirty, warm Valencia energy — short sentences, playful emoji, CTA at the end",
-      "calendar_file": "lunarubia_calendar.json",
+      "calendar_file": "luna-vlc_calendar.json",
       "actors": ["luna-vlc"],
       "notes": "solo account for luna-vlc — real-photo-based actor, use Mode R for ref-driven generation"
     }
@@ -47,5 +47,6 @@
     "image_aspect_ratio": "4:5",
     "reel_aspect_ratio": "9:16"
   },
+  "content_dir": "content",
   "env_file": ".env"
 }

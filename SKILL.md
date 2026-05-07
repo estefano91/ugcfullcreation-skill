@@ -60,9 +60,29 @@ The skill never hardcodes paths, account names, or budget values. It always read
     "image_aspect_ratio": "4:5",
     "reel_aspect_ratio": "9:16"
   },
+  "content_dir": "content",
   "env_file": ".env"
 }
 ```
+
+**`content_dir` folder structure** — all finished content lives here, organized by actor and type:
+
+```
+{root}/content/{actor_id}/
+  ├── carousel/
+  │   └── {set-name}/        ← one folder per carousel set, slides named slide-01-*.png etc.
+  ├── single/
+  │   ├── collages/           ← 2x2 collage PNGs (one file = one post)
+  │   └── shots/              ← individual single-image posts
+  └── video/                  ← MP4 reels, named reel-01.mp4, reel-02.mp4, etc.
+```
+
+**Rules:**
+- Every generation mode (A, R, B, C, D) **must copy the final output** to the appropriate `content/` subfolder after generation, in addition to saving it in the campaign folder.
+- `STATIC_POST` → `content/{actor_id}/single/collages/` (if collage) or `content/{actor_id}/single/shots/`
+- `CAROUSEL` → `content/{actor_id}/carousel/{set-name}/` (create the subfolder named after the campaign concept)
+- `REEL` → `content/{actor_id}/video/`
+- The calendar (`{actor_id}_calendar.json`) uses `source` (single file) or `source_dir` + `slides[]` (carousel) referencing paths relative to `{root}/`.
 
 ### How to load workspace
 
@@ -72,6 +92,7 @@ The skill never hardcodes paths, account names, or budget values. It always read
 3. Read `{workspace.root}/.env` for API keys (FAL_KEY, ZERNIO_API_KEY, ANTHROPIC_API_KEY, etc.)
 4. Set `ACTORS_BASE = {workspace.root}/actors/`
 5. Set `CAMPAIGNS_BASE = {workspace.root}/campaigns/`
+6. Set `CONTENT_BASE = {workspace.root}/{workspace.content_dir}/` (default: `{root}/content/`)
 
 **Budget-aware model routing:**
 
