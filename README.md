@@ -114,6 +114,19 @@ Ejemplos de actrices configuradas:
 - **Mia** — 23 años, mediterránea, pelo oscuro ondulado, piel dorada. Moda atrevida y belleza.
 - **Rowan** — 22 años, pelirroja, piel muy clara, ojos verde-gris. Editorial y tonos de otoño.
 
+### Carpetas de cada actriz
+
+```
+actors/{actriz}/
+  ├── hero_shots/       ← fotos de referencia de cara (2–4 máx.)
+  ├── references/       ← refs adicionales si las hay
+  ├── pinterest/        ← imágenes de inspiración para Modo R
+  ├── motion_refs/      ← vídeos de referencia de movimiento/cámara (.mp4 .mov)
+  └── actor_card.json   ← identidad de la actriz (generada automáticamente)
+```
+
+La carpeta `motion_refs/` es la que usa el sistema cuando generas un reel con vídeo de referencia (Modo video-to-video). Pon ahí los vídeos de TikTok, Reels o cualquier clip que quieras usar como guía de movimiento. El sistema los detecta automáticamente — no hace falta indicar la ruta a mano.
+
 ---
 
 ## Formatos disponibles

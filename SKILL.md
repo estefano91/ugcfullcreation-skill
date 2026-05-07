@@ -2326,27 +2326,53 @@ video_url = result["video"]["url"]
 
 **Use this when the user provides a reference video** to replicate its motion, camera style, and cinematics with a different character (the actor). The reference video guides HOW the new video looks; the actor's image anchors WHO appears.
 
-**The generate.py for this mode must ask for the video path interactively using `input()` at runtime.**
+**Reference video source — always check `motion_refs/` first:**
+
+Each actor has a `motion_refs/` folder at `actors/{actor_id}/motion_refs/`. When building generate.py for Mode 2 or Mode 4:
+1. Scan `actors/{actor_id}/motion_refs/` for `.mp4` / `.mov` files
+2. If found → list them, auto-select if only one, else let user pick by number
+3. If empty → fall back to asking for a path/URL interactively
 
 ```python
 import fal_client
 import os
 import requests
+import glob
 
-FAL_KEY = "930975a9-c25c-497d-b0a1-01f27317680a:21d6ce06c9e934ab27fc427d4e4748e1"
-os.environ["FAL_KEY"] = FAL_KEY
+env = dict(l.split("=",1) for l in open("/Users/asociaciondame/ugcpanorama/.env").read().splitlines() if "=" in l)
+os.environ["FAL_KEY"] = env["FAL_KEY"]
 
-# --- Ask for reference video at runtime ---
-print("\n── Video de referencia ──")
-ref_video_input = input("  Ruta local o URL del video de referencia (.mp4/.mov, 3-10s): ").strip()
+ACTOR_ID   = "{actor_id}"
+MOTION_DIR = f"/Users/asociaciondame/ugcpanorama/actors/{ACTOR_ID}/motion_refs"
 
-if os.path.exists(ref_video_input):
-    print("  ↑ Subiendo video de referencia a CDN...")
-    video_cdn_url = fal_client.upload_file(ref_video_input)
-    print(f"  ✓ {os.path.basename(ref_video_input)} → {video_cdn_url}")
+# --- Auto-detect reference videos from motion_refs/ ---
+motion_refs = sorted(glob.glob(os.path.join(MOTION_DIR, "*.mp4")) +
+                     glob.glob(os.path.join(MOTION_DIR, "*.mov")))
+
+if motion_refs:
+    print(f"\n── Vídeos de referencia ({ACTOR_ID}/motion_refs/) ──")
+    for i, p in enumerate(motion_refs, 1):
+        size_mb = os.path.getsize(p) / (1024*1024)
+        print(f"  [{i}] {os.path.basename(p)}  ({size_mb:.1f} MB)")
+    if len(motion_refs) == 1:
+        ref_video_path = motion_refs[0]
+        print(f"  → Auto-seleccionado: {os.path.basename(ref_video_path)}")
+    else:
+        choice = input("  Elige un número: ").strip()
+        ref_video_path = motion_refs[int(choice) - 1]
+    print(f"  ↑ Subiendo a CDN...")
+    video_cdn_url = fal_client.upload_file(ref_video_path)
+    print(f"  ✓ {os.path.basename(ref_video_path)} → {video_cdn_url[:60]}...")
 else:
-    video_cdn_url = ref_video_input  # already a CDN URL
-    print(f"  ✓ URL recibida: {video_cdn_url}")
+    print(f"\n── motion_refs/ vacío — introduce el vídeo manualmente ──")
+    ref_video_input = input("  Ruta local o URL del vídeo de referencia (.mp4/.mov, 3-10s): ").strip()
+    if os.path.exists(ref_video_input):
+        print("  ↑ Subiendo a CDN...")
+        video_cdn_url = fal_client.upload_file(ref_video_input)
+        print(f"  ✓ {os.path.basename(ref_video_input)} → {video_cdn_url[:60]}...")
+    else:
+        video_cdn_url = ref_video_input
+        print(f"  ✓ URL recibida")
 
 # --- Upload actor reference image ---
 print("\n── Subiendo imagen de referencia del actor ──")
