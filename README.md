@@ -175,6 +175,27 @@ El sistema genera primero el fotograma estático y luego anima con `zoom_in_slow
 
 ---
 
+## Lo que el sistema hace solo, sin que tengas que pedirlo
+
+Hay una serie de cosas técnicas que la skill maneja automáticamente en cada generación. No hace falta que las sepas ni que las pidas — pasan siempre, por defecto. Aquí van explicadas simple:
+
+**🎨 Realismo automático**
+Cada imagen y vídeo lleva "toques de realismo" incluidos en el prompt: textura de piel real, pelo que no está perfectamente peinado, ropa con caída y peso natural, luz ligeramente desigual, un detalle imperfecto de fondo. Es lo que hace que una foto se vea como una foto de verdad y no como un render de IA. Esto se aplica siempre, incluso en generaciones rápidas.
+
+**🚫 Evita que Instagram/las IAs bloqueen el contenido**
+Algunos proveedores de IA (sobre todo GPT Image) tienen un filtro de contenido muy sensible con bikinis, ropa ajustada o ciertas poses combinadas con fotos de referencia reales. El sistema ya sabe qué combinaciones bloquean y cuáles no — lo ha ido aprendiendo generación a generación — y elige el proveedor y la redacción del prompt que tiene más probabilidad de pasar limpio a la primera. Si algo se bloquea igualmente, el sistema reintenta con un ajuste (cambia el ángulo, la palabra usada para la prenda, o cambia de proveedor) en vez de simplemente fallar.
+
+**📸 Identidad estable, incluso con prompts cortos**
+Para que la cara de tu actriz no cambie entre fotos, el sistema usa muy pocas fotos de referencia (1-2, no más) y prompts cortos y sencillos — cuantos más detalles de identidad metas en el texto (medidas exactas, colores en hexadecimal...), peor funciona, porque compite con la propia foto de referencia. La cara la lleva la foto, no el texto.
+
+**🎥 Cámara fija en los vídeos**
+Por defecto, los vídeos ahora se generan con cámara fija (como un trípode) en vez de "seguir" el movimiento de la persona — esto evita que la cara se deforme o pixele cuando hay movimiento rápido. Si necesitas que la cámara sí se mueva (zoom, paneo…), se puede pedir explícitamente.
+
+**🧠 Aprende y no se le olvida**
+Cada vez que una generación se bloquea o pasa de forma sorprendente, el sistema lo anota en su base de conocimiento interna (parte del código de la skill, guardado en GitHub). Eso significa que estas reglas no dependen de esta conversación — la próxima vez que uses `/ugcfullcreation`, en un chat nuevo, semanas después, el sistema ya sabe todo esto y lo aplica solo.
+
+---
+
 ## Cuánto cuesta
 
 Son costes de generación pagados directamente a los proveedores de IA. La skill en sí es gratuita.
