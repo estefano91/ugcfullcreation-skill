@@ -3168,6 +3168,27 @@ Very low bed-level wide-angle perspective, harsh on-camera smartphone flash, can
 
 ---
 
+#### MAX-REALISM ADDENDUM — always apply, even in short prompts (standing rule, added 2026-07-13)
+
+**Rule: every image/video generation must carry as much realism texture as the prompt budget allows — never skip this to save a sentence.**
+
+Important distinction (this is what makes it safe to do even under the "short prompt" rule above): the content-policy risk from long prompts comes from **identity-fingerprint detail** — hex codes, mm measurements, per-feature identity claims ("2mm brow asymmetry," exact bust size, etc.) — NOT from generic photographic-realism language. Realism texture cues (skin texture, fabric drape, imperfect background detail, natural lighting unevenness) do not appear to trigger the stricter "real person" filter in any confirmed SYSTEM 10 entry. So they can and should be added freely, even to a 2-4 sentence NBP prompt — they just shouldn't replace the identity-carrying job the ref photo already does.
+
+**Default realism suffix — append to every image prompt (adapt wording to fit, but always include the ideas):**
+```
+Natural skin texture with visible pores, a few flyaway hairs not perfectly styled, fabric with visible weave/texture and natural drape and weight, one small imperfect lived-in detail in the background, slightly uneven natural light (not perfectly diffused), no studio lighting, no retouching, no airbrushing.
+```
+
+**Default realism suffix — video motion prompts (Kling):** keep the "static fixed camera" instruction (see below) but also add: `natural handheld micro-shake, slight sensor grain, not overly smooth or stabilized` — unless the shot specifically calls for a locked-off tripod look with zero grain.
+
+**Where to add it:**
+- Image formats (STATIC_POST, CAROUSEL, REEL frame, any NBP/GPT prompt): append the realism suffix as the last sentence(s) of the prompt, after outfit/scene/camera but before any negative-prompt block.
+- Full 6-layer prompts (SYSTEM 4): this is just Layer 5 — already mandatory there. The addendum here exists because short-prompt (SYSTEM 8/10) generations were skipping it.
+
+**Do not confuse with identity dump:** never add hex skin/eye/hair values or precise body measurements to a short prompt just because "more realism" was requested — that's the fingerprint risk, not realism. Realism = texture and imperfection language; fingerprint = identity-specific numeric/anatomical precision.
+
+---
+
 ---
 
 ### OUTPUT FORMAT — GPT Image 2 edit (`openai/gpt-image-2/edit` via fal.ai)
