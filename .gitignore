@@ -2,6 +2,8 @@
 campaigns/
 selec/
 db/
+content/
+.wrangler/
 
 # Actor references (personal images)
 actors/
