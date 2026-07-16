@@ -2240,6 +2240,14 @@ print("  ✓ Dry-run passed — prompt is safe")
 
 ---
 
+### STATIC/PROPPED CAMERA RULE — describe it in the MOTION prompt, never the IMAGE prompt (added 2026-07-16)
+
+When the user wants a "camera set down/propped on the ground, not handheld, not following the subject" look for a video (fixes Kling's default tendency to track/follow the subject and distort the face — see MAX-REALISM / static-camera fix above), the camera-stationary instruction belongs **only in the Kling motion prompt**, describing camera *behavior* ("does not pan/track/zoom/follow").
+
+**Do NOT** put a literal description like "a phone propped up on the ground nearby framing the shot" into the NBP/GPT **image prompt** — confirmed 2026-07-16 (isa-llopis, turia-plank-white-wide): NBP took it literally and rendered an actual phone object sitting in the grass with a mirrored recording-screen preview in the corner of the frame, which makes no visual sense (a phone can't show a third-person recording of itself). The image prompt describes what's IN the scene; the motion prompt describes how the CAMERA behaves. Conflating the two put a nonsensical prop in frame.
+
+**Fix:** image prompt describes the scene/pose only (no camera-object mentions). Motion prompt carries all "static, propped, does not pan/track/zoom/follow, no handheld shake" language.
+
 ### FACE CONSISTENCY RULE — ALWAYS USE 2-STEP
 
 **The only reliable way to get consistent actor face in Kling is the 2-step pipeline:**
