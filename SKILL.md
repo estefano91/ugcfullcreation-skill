@@ -848,8 +848,8 @@ actors/{actor_id}/
      Añade imágenes de inspiración a esa carpeta y vuelve a ejecutar.
      ```
      Stop.
-   - **MANDATORY: Generate a complete JSON for EVERY Pinterest image before anything else.**
-     This is non-negotiable — always do this, even if the user doesn't ask. The JSON is the source of truth for prompt generation. Use this schema for every image:
+   - **MANDATORY: Generate a complete JSON for EVERY Pinterest/reference image before anything else — including ad-hoc single-image requests outside a formal Mode R run (e.g. "recreate this image with X").**
+     This is non-negotiable — always do this, even if the user doesn't ask, and even when it feels like a quick one-off. Confirmed 2026-07-28 (isa-llopis): skipping straight from "look at the image" to a condensed 3-4 sentence prompt (no JSON step) produced results that only captured the general gist (right outfit category, right setting type) but lost specific fidelity — exact hand/prop placement, brand names/logos, precise camera angle, specific background objects. Rebuilding the same 3 images from an explicit JSON first, then writing a longer prompt that transcribes the JSON fields directly (still followed by the MAX-REALISM suffix), produced dramatically more faithful recreations — down to the correct board brand text, the exact bungee tie-down pattern, the second vehicle parked in the background, the string-light rigging pattern. The JSON step is not busywork — it is what prevents the model from filling gaps with generic defaults. The "keep prompts short" rule (SYSTEM 8/10) is about avoiding identity-fingerprint precision, NOT about being vague on scene detail — a long, detailed scene description is safe and actively improves fidelity. The JSON is the source of truth for prompt generation. Use this schema for every image:
      ```json
      {
        "scene": "brief scene label",
