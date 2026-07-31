@@ -2348,6 +2348,8 @@ Total: ~$0.99
 - Generating the first frame with NBP first locks the actor's identity at the pixel level
 - Kling then animates FROM that face-locked frame → identity stays consistent across all frames
 
+**Duration affects face drift — confirmed 2026-07-31 (isa-llopis, @edurnyx motion ref):** even with the 3-step pipeline's face-locked starting frame, a 10s `video-to-video/reference` output showed noticeably worse face fidelity to the actor by the end of the clip than a 7s output did on the same source video (different segment, comparable framing). Kling's identity lock degrades progressively over the duration of a video-to-video/reference generation — it's not just a start-frame problem. **Prefer 7s or shorter for video-to-video/reference when face fidelity matters**; only go to 10s if the content doesn't need a clear identifiable face throughout (e.g., back-view, product-focus, or the face is only visible briefly). Also prefer reference segments with moderate/medium framing over extreme close-ups with exaggerated expressions (mouth wide open, eyes crossed) — those seemed to compound the drift, though this wasn't isolated as rigorously as the duration factor.
+
 **Step 1 — Extract first frame:**
 ```python
 import subprocess
