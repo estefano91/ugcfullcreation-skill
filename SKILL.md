@@ -3167,6 +3167,22 @@ Different content filter stack (not OpenAI's). Generally more permissive for pos
 | "thong" specifically (vs "panties") in the SAME upright-kneeling pose that otherwise passes | BLOCKS | Confirmed 2026-07-20 (isa-llopis), immediately after the finding above. With the torso upright (the confirmed-safe posture), swapping only the word "panties" → "thong" (identical prompt/pose/ref/seed otherwise) blocked; re-running with "panties" again immediately passed. So the underwear word DOES matter — but only interacts with posture: "thong" is risky even upright, "panties" is safe even though visually similar coverage. Prefer "panties"/"underwear" wording over "thong" for bedroom content regardless of pose. |
 | All-fours pose ("donkey kick" exercise, on hands and knees, one leg kicked up behind) + WHITE GYM SHORTS (athletic wear, not underwear/swimwear) + indoor living room + 1 ref + safety_tolerance 6 | PASSES on first try | Confirmed 2026-08-01 (isa-llopis, livingroom-donkeykick-white). This is the SAME all-fours body posture that reliably blocks with underwear/swimwear (see above and the 2026-07-16 pool entry) — but here it passed cleanly with athletic gym shorts in a home-workout context. Confirms the trigger for the all-fours block is the underwear/swimwear + intimate-context combination, not the all-fours posture by itself. All-fours + legitimate fitness-exercise framing (donkey kick, fire hydrant, etc.) + athletic wear is safe; all-fours + underwear/bikini + bedroom/pool-intimate framing is not. When a user asks for an all-fours exercise pose, check the outfit/setting context before assuming it will block — don't skip straight to a workaround pose if it's clearly athletic content. |
 
+#### SINGLE-CALL 2x2 COLLAGE — generate the grid directly, don't composite 4 separate generations (added 2026-08-01)
+
+**When the user asks for "1 foto/imagen que contenga varias fotos" (a collage, a 4-in-1 grid, a "photo dump" style post) — this means ONE credit/generation, not 4 separate generations manually composited with PIL afterward.** Confirmed 2026-08-01 (isa-llopis, rooftop donkey-kick collage): a single NBP call describing a "2x2 grid photo collage with four separate candid photos... arranged in four equal quadrants divided by thin white borders," with each quadrant explicitly described (framing, angle, background detail) in the same prompt, produced a coherent 4-panel grid with real pose/angle variety AND consistent identity across all four panels — in one $0.15 generation instead of 4×$0.15 + manual compositing.
+
+**Template:**
+```
+A single 2x2 grid photo collage with four separate candid photos of the same woman shown in the
+reference images, arranged in four equal quadrants divided by thin white borders. All four photos
+show her [shared action/setting/outfit — established once]. Top-left quadrant: [framing/angle 1].
+Top-right quadrant: [framing/angle 2]. Bottom-left quadrant: [framing/angle 3]. Bottom-right
+quadrant: [framing/angle 4]. Natural skin texture, no studio lighting, no retouching, looks like a
+real iPhone photo dump grid.
+```
+
+**When to use this vs. the 4-separate-generations + PIL compose approach:** use this single-call method by default whenever the user wants "una foto" / "una imagen" that contains a collage — it's cheaper and faster. Fall back to generating 4 separate images and compositing with PIL only if: the user explicitly asks for each panel individually, needs different outfits per panel (harder to keep straight in one grid prompt), or a first single-call attempt comes out with inconsistent identity/quality across quadrants.
+
 #### PROMPT_SHORT TEMPLATE (for Nano Banana fallback)
 
 ```
