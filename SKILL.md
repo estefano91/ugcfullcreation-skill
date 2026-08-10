@@ -3212,6 +3212,11 @@ Important distinction (this is what makes it safe to do even under the "short pr
 Natural skin texture with visible pores, a few flyaway hairs not perfectly styled, fabric with visible weave/texture and natural drape and weight, one small imperfect lived-in detail in the background, slightly uneven natural light (not perfectly diffused), no studio lighting, no retouching, no airbrushing.
 ```
 
+**REVISED 2026-08-10 — the short suffix above is a floor, not a ceiling.** User flagged results going "plastic" after a run of generations that only used the short suffix and dropped the Layer-6 negative prompt entirely. Root cause: the short suffix only covers ~5 of the 10 SYSTEM 2 anchors (skin pores, flyaways, fabric, background detail, uneven light) and skips under-eye texture, skin tone unevenness, sensor/lens grain, fingernail texture, and jewelry-gravity — plus no generation was including any negative-prompt language at all. Use this fuller version by default going forward; it's still pure texture/imperfection language (safe per the distinction above, not identity-fingerprint risk) so there's no content-policy tradeoff to lengthening it:
+```
+Natural skin texture with visible pores on nose and cheeks, a few flyaway hairs not perfectly styled, slight natural under-eye texture and mild skin tone unevenness (not airbrushed-perfect), fabric with visible weave/texture and natural drape and weight, one small imperfect lived-in detail in the background, slightly uneven natural light not perfectly diffused, faint natural sensor grain (not overly smooth), fingernails with visible texture not glossy-rendered, jewelry hanging naturally with real weight. Negative: no studio lighting, no retouching, no airbrushing, no plastic-looking skin, no oversaturated HDR glow, no oversharpening, no 3D-render or CGI look, no uncanny-valley face, no beauty-filter smoothing.
+```
+
 **Default realism suffix — video motion prompts (Kling):** keep the "static fixed camera" instruction (see below) but also add: `natural handheld micro-shake, slight sensor grain, not overly smooth or stabilized` — unless the shot specifically calls for a locked-off tripod look with zero grain.
 
 **Where to add it:**
